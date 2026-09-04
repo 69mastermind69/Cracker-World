@@ -1,8 +1,13 @@
+
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 
 from .tools import TOOLS as OLD_TOOLS
 from .free_tools import FREE_TOOLS
 
+
+# =========================================================
+# COMBINED TOOL REGISTRY
+# =========================================================
 
 TOOLS = {
     **OLD_TOOLS,
@@ -10,54 +15,133 @@ TOOLS = {
 }
 
 
+# =========================================================
+# CATEGORIES
+# =========================================================
+
 CATEGORIES = {
+
     "🧮 Math": [
-        "calc", "percent", "average", "minmax",
-        "evenodd", "prime", "gcd", "lcm",
-        "factorial", "fibonacci", "tobinary",
-        "frombinary", "tohex", "fromhex",
-        "square", "cube", "sqrt", "power",
-        "abs", "round", "sum", "product",
-        "median", "range",
+        "calc",
+        "percent",
+        "average",
+        "minmax",
+        "evenodd",
+        "prime",
+        "gcd",
+        "lcm",
+        "factorial",
+        "fibonacci",
+        "tobinary",
+        "frombinary",
+        "tohex",
+        "fromhex",
+        "square",
+        "cube",
+        "sqrt",
+        "power",
+        "abs",
+        "round",
+        "sum",
+        "product",
+        "median",
+        "range",
     ],
 
     "🔤 Text": [
-        "upper", "lower", "title", "sentence",
-        "reverse", "spaces", "emptylines",
-        "numberlines", "count", "chars", "lines",
-        "stats", "dedupe", "sortlines", "trim",
-        "nodigits", "nopunctuation", "digits",
-        "letters", "altcase", "repeat",
+        "upper",
+        "lower",
+        "title",
+        "sentence",
+        "reverse",
+        "spaces",
+        "emptylines",
+        "numberlines",
+        "count",
+        "chars",
+        "lines",
+        "stats",
+        "dedupe",
+        "sortlines",
+        "trim",
+        "nodigits",
+        "nopunctuation",
+        "digits",
+        "letters",
+        "altcase",
+        "repeat",
 
-        "textlen", "vowels", "consonants",
-        "digitcount", "spacecount", "punctcount",
-        "uppercount", "lowercount", "capitalize",
-        "swapcase", "center", "wrap",
-        "duplicatewords", "uniquewords",
-        "reversewords", "sortwords",
-        "wordfreq", "longestword", "shortestword",
-        "palindrome", "isogram", "anagram",
-        "removevowels", "removeconsonants",
-        "alphanumeric", "asciionly",
-        "newlinesto", "tabs",
-        "reverselines", "sortlines2",
+        # Free Text
+        "textlen",
+        "wordcount2",
+        "vowels",
+        "consonants",
+        "digitcount",
+        "spacecount",
+        "punctcount",
+        "uppercount",
+        "lowercount",
+        "capitalize",
+        "swapcase",
+        "center",
+        "wrap",
+        "duplicatewords",
+        "uniquewords",
+        "reversewords",
+        "sortwords",
+        "alphabetical",
+        "wordfreq",
+        "longestword",
+        "shortestword",
+        "palindrome",
+        "isogram",
+        "anagram",
+        "removevowels",
+        "removeconsonants",
+        "alphanumeric",
+        "keepascii",
+        "nonascii",
+        "normalizenewline",
+        "tabspace",
+        "spacetab",
+        "collapselines",
+        "reverselines",
+        "sortuniquelines",
         "linelengths",
     ],
 
     "🔐 Hash & Encoding": [
-        "ascii", "asciidecode",
-        "binary", "binarydecode",
-        "hex", "hexdecode",
+        "ascii",
+        "asciidecode",
+        "binary",
+        "binarydecode",
+        "hex",
+        "hexdecode",
         "rot13",
-        "base64", "base64decode",
-        "urlencode", "urldecode",
-        "md5", "sha1", "sha224",
-        "sha256", "sha384", "sha512",
+        "base64",
+        "base64decode",
+        "urlencode",
+        "urldecode",
+        "md5",
+        "sha1",
+        "sha224",
+        "sha256",
+        "sha384",
+        "sha512",
 
+        # Free Encoding
         "base32",
+        "base32decode",
         "base16",
+        "base16decode",
         "urlcomponent",
-        "unicode",
+        "urlcomponentdecode",
+        "htmlescape2",
+        "htmlunescape2",
+        "codepoints",
+        "unicodechars",
+
+        # Free Hash
         "sha3_224",
         "sha3_256",
         "sha3_384",
@@ -106,6 +190,8 @@ CATEGORIES = {
         "dice",
         "dices",
         "randomletter",
+        "randomlower",
+        "randomupper",
         "randomdigit",
         "randomcolor",
         "randomhex",
@@ -129,47 +215,50 @@ CATEGORIES = {
         "month",
         "day",
         "weekday",
-        "leapyear",
-        "daysinmonth",
+        "leap",
+        "monthdays",
         "addhours",
         "addminutes",
     ],
 
     "🔢 Free Numbers": [
-        "decimalbin",
-        "decimaloct",
-        "decimalhex",
-        "bindecimal",
-        "binoctal",
+        "decbinary",
+        "decoctal",
+        "dechex",
+        "bindec",
+        "octdec",
+        "hexdec",
         "binhex",
-        "octdecimal",
-        "octbinary",
-        "octhex",
-        "hexdecimal",
-        "hexbinary",
-        "hexoctal",
+        "hexbin",
         "digitsum",
-        "digitalroot",
+        "root",
         "factors",
         "primefactors",
+        "lcm2",
+        "gcd2",
         "distance",
         "percentchange",
         "proportion",
-        "mean",
-        "mode",
+        "mean2",
+        "median2",
+        "mode2",
         "variance",
         "stdev",
         "percentageof",
-        "addnumbers",
-        "multiplynumbers",
+        "addnums",
+        "mulnums",
     ],
 
     "🎨 Free Color": [
-        "rgbhsl",
-        "hslrgb",
+        "rgbtohsl",
+        "hsltorgb",
     ],
 }
 
+
+# =========================================================
+# MAIN TOOLS KEYBOARD
+# =========================================================
 
 def tools_keyboard():
     keyboard = []
@@ -178,20 +267,29 @@ def tools_keyboard():
         keyboard.append([
             InlineKeyboardButton(
                 text=category_name,
-                callback_data=f"category:{category_name}"
+                callback_data=f"category:{category_name}",
             )
         ])
 
     return InlineKeyboardMarkup(keyboard)
 
 
+# =========================================================
+# CATEGORY KEYBOARD
+# =========================================================
+
 def category_keyboard(category_name):
-    tool_ids = CATEGORIES.get(category_name, [])
+    tool_ids = CATEGORIES.get(
+        category_name,
+        []
+    )
 
     keyboard = []
     row = []
 
     for tool_id in tool_ids:
+
+        # Never show a dead button.
         if tool_id not in TOOLS:
             continue
 
@@ -200,7 +298,7 @@ def category_keyboard(category_name):
         row.append(
             InlineKeyboardButton(
                 text=tool_name,
-                callback_data=f"tool:{tool_id}"
+                callback_data=f"tool:{tool_id}",
             )
         )
 
@@ -214,8 +312,9 @@ def category_keyboard(category_name):
     keyboard.append([
         InlineKeyboardButton(
             text="⬅️ Back",
-            callback_data="back:tools"
+            callback_data="back:tools",
         )
     ])
 
     return InlineKeyboardMarkup(keyboard)
+
