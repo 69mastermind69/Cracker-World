@@ -5,190 +5,89 @@ from .tools import TOOLS as OLD_TOOLS
 from .free_tools import FREE_TOOLS
 
 
-# =========================================================
-# COMBINED TOOL REGISTRY
-# =========================================================
-
+# Keep the existing tools and add the offline free tools.
 TOOLS = {
     **OLD_TOOLS,
     **FREE_TOOLS,
 }
 
 
-# =========================================================
-# CATEGORIES
-# =========================================================
-
 CATEGORIES = {
-
     "🧮 Math": [
-        "calc",
-        "percent",
-        "average",
-        "minmax",
-        "evenodd",
-        "prime",
-        "gcd",
-        "lcm",
-        "factorial",
-        "fibonacci",
-        "tobinary",
-        "frombinary",
-        "tohex",
-        "fromhex",
-        "square",
-        "cube",
-        "sqrt",
-        "power",
-        "abs",
-        "round",
-        "sum",
-        "product",
-        "median",
-        "range",
+        "calc", "percent", "average", "minmax",
+        "evenodd", "prime", "gcd", "lcm",
+        "factorial", "fibonacci", "tobinary",
+        "frombinary", "tohex", "fromhex",
+        "square", "cube", "sqrt", "power",
+        "abs", "round", "sum", "product",
+        "median", "range",
     ],
 
     "🔤 Text": [
-        "upper",
-        "lower",
-        "title",
-        "sentence",
-        "reverse",
-        "spaces",
-        "emptylines",
-        "numberlines",
-        "count",
-        "chars",
-        "lines",
-        "stats",
-        "dedupe",
-        "sortlines",
-        "trim",
-        "nodigits",
-        "nopunctuation",
-        "digits",
-        "letters",
-        "altcase",
-        "repeat",
+        "upper", "lower", "title", "sentence",
+        "reverse", "spaces", "emptylines",
+        "numberlines", "count", "chars", "lines",
+        "stats", "dedupe", "sortlines", "trim",
+        "nodigits", "nopunctuation", "digits",
+        "letters", "altcase", "repeat",
 
-        # Free Text
-        "textlen",
-        "wordcount2",
-        "vowels",
-        "consonants",
-        "digitcount",
-        "spacecount",
-        "punctcount",
-        "uppercount",
-        "lowercount",
-        "capitalize",
-        "swapcase",
-        "center",
-        "wrap",
-        "duplicatewords",
-        "uniquewords",
-        "reversewords",
-        "sortwords",
-        "alphabetical",
-        "wordfreq",
-        "longestword",
-        "shortestword",
-        "palindrome",
-        "isogram",
-        "anagram",
-        "removevowels",
-        "removeconsonants",
-        "alphanumeric",
-        "keepascii",
-        "nonascii",
-        "normalizenewline",
-        "tabspace",
-        "spacetab",
-        "collapselines",
-        "reverselines",
-        "sortuniquelines",
-        "linelengths",
+        "textlen", "wordcount2", "vowels", "consonants",
+        "digitcount", "spacecount", "punctcount",
+        "uppercount", "lowercount", "capitalize",
+        "swapcase", "center", "wrap",
+        "duplicatewords", "uniquewords",
+        "reversewords", "sortwords",
+        "alphabetical", "wordfreq",
+        "longestword", "shortestword",
+        "palindrome", "isogram", "anagram",
+        "removevowels", "removeconsonants",
+        "alphanumeric", "keepascii", "nonascii",
+        "normalizenewline", "tabspace", "spacetab",
+        "collapselines", "reverselines",
+        "sortuniquelines", "linelengths",
     ],
 
     "🔐 Hash & Encoding": [
-        "ascii",
-        "asciidecode",
-        "binary",
-        "binarydecode",
-        "hex",
-        "hexdecode",
+        "ascii", "asciidecode",
+        "binary", "binarydecode",
+        "hex", "hexdecode",
         "rot13",
-        "base64",
-        "base64decode",
-        "urlencode",
-        "urldecode",
-        "md5",
-        "sha1",
-        "sha224",
-        "sha256",
-        "sha384",
-        "sha512",
+        "base64", "base64decode",
+        "urlencode", "urldecode",
+        "md5", "sha1", "sha224",
+        "sha256", "sha384", "sha512",
 
-        # Free Encoding
-        "base32",
-        "base32decode",
-        "base16",
-        "base16decode",
-        "urlcomponent",
-        "urlcomponentdecode",
-        "htmlescape2",
-        "htmlunescape2",
-        "codepoints",
-        "unicodechars",
-
-        # Free Hash
-        "sha3_224",
-        "sha3_256",
-        "sha3_384",
-        "sha3_512",
-        "blake2b",
-        "blake2s",
-        "crc32",
+        "base32", "base32decode",
+        "base16", "base16decode",
+        "urlcomponent", "urlcomponentdecode",
+        "unicodechars", "codepoints",
+        "sha3_224", "sha3_256",
+        "sha3_384", "sha3_512",
+        "blake2b", "blake2s", "crc32",
     ],
 
     "🧑‍💻 Developer": [
-        "regex",
-        "findall",
-        "htmlescape",
-        "htmlunescape",
-        "jsonescape",
-        "jsonunescape",
-        "pyrepr",
-        "pyliteral",
-        "queryencode",
-        "querydecode",
-        "nowts",
-        "tstodate",
-        "datetots",
-        "hextorgb",
-        "rgbtohex",
-        "csvsplit",
+        "regex", "findall",
+        "htmlescape", "htmlunescape",
+        "jsonescape", "jsonunescape",
+        "pyrepr", "pyliteral",
+        "queryencode", "querydecode",
+        "nowts", "tstodate",
+        "datetots", "hextorgb",
+        "rgbtohex", "csvsplit",
     ],
 
     "📊 JSON & Data": [
-        "json",
-        "jsonmin",
-        "jsoncheck",
-        "jsonsort",
-        "jsoncompact",
-        "jsontype",
-        "jsonkeys",
-        "jsonlength",
-        "csvjson",
+        "json", "jsonmin", "jsoncheck",
+        "jsonsort", "jsoncompact",
+        "jsontype", "jsonkeys",
+        "jsonlength", "csvjson",
         "csvcolumns",
     ],
 
     "🎲 Random": [
-        "random",
-        "choose",
-        "coin",
-        "dice",
-        "dices",
+        "random", "choose",
+        "coin", "dice", "dices",
         "randomletter",
         "randomlower",
         "randomupper",
@@ -200,25 +99,17 @@ CATEGORIES = {
     ],
 
     "🆔 Generators": [
-        "uuid",
-        "uuids",
-        "password",
-        "uuidhex",
+        "uuid", "uuids",
+        "password", "uuidhex",
     ],
 
     "📅 Date": [
-        "datediff",
-        "adddays",
-        "today",
-        "datetime",
-        "year",
-        "month",
-        "day",
-        "weekday",
-        "leap",
-        "monthdays",
-        "addhours",
-        "addminutes",
+        "datediff", "adddays",
+        "today", "datetime",
+        "year", "month", "day",
+        "weekday", "leapyear",
+        "daysinmonth",
+        "addhours", "addminutes",
     ],
 
     "🔢 Free Numbers": [
@@ -256,10 +147,6 @@ CATEGORIES = {
 }
 
 
-# =========================================================
-# MAIN TOOLS KEYBOARD
-# =========================================================
-
 def tools_keyboard():
     keyboard = []
 
@@ -274,22 +161,15 @@ def tools_keyboard():
     return InlineKeyboardMarkup(keyboard)
 
 
-# =========================================================
-# CATEGORY KEYBOARD
-# =========================================================
-
 def category_keyboard(category_name):
-    tool_ids = CATEGORIES.get(
-        category_name,
-        []
-    )
+    tool_ids = CATEGORIES.get(category_name, [])
 
     keyboard = []
     row = []
 
     for tool_id in tool_ids:
 
-        # Never show a dead button.
+        # Only show tools that actually exist.
         if tool_id not in TOOLS:
             continue
 
@@ -317,4 +197,3 @@ def category_keyboard(category_name):
     ])
 
     return InlineKeyboardMarkup(keyboard)
-
