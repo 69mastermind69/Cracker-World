@@ -1,5 +1,6 @@
 import base64
 import hashlib
+import html
 import json
 import math
 import random
@@ -10,9 +11,9 @@ from datetime import datetime, timedelta
 from urllib.parse import quote, unquote
 
 
-# =========================
+# =========================================================
 # BASIC CALCULATOR
-# =========================
+# =========================================================
 
 def calculator(text):
     text = text.strip()
@@ -30,9 +31,9 @@ def calculator(text):
         return "❌ Invalid calculation."
 
 
-# =========================
+# =========================================================
 # TEXT TOOLS
-# =========================
+# =========================================================
 
 def uppercase(text):
     return text.upper() if text else "Give me some text."
@@ -160,9 +161,100 @@ def sort_lines(text):
     )
 
 
-# =========================
+def trim_text(text):
+    if not text:
+        return "Give me some text."
+
+    return text.strip()
+
+
+def remove_digits(text):
+    if not text:
+        return "Give me some text."
+
+    return re.sub(r"\d", "", text)
+
+
+def remove_punctuation(text):
+    if not text:
+        return "Give me some text."
+
+    return text.translate(
+        str.maketrans("", "", string.punctuation)
+    )
+
+
+def digits_only(text):
+    if not text:
+        return "Give me some text."
+
+    return "".join(
+        char
+        for char in text
+        if char.isdigit()
+    )
+
+
+def letters_only(text):
+    if not text:
+        return "Give me some text."
+
+    return "".join(
+        char
+        for char in text
+        if char.isalpha()
+    )
+
+
+def alternating_case(text):
+    if not text:
+        return "Give me some text."
+
+    result = []
+    index = 0
+
+    for char in text:
+        if char.isalpha():
+            if index % 2 == 0:
+                result.append(char.upper())
+            else:
+                result.append(char.lower())
+
+            index += 1
+        else:
+            result.append(char)
+
+    return "".join(result)
+
+
+def repeat_text(text):
+    parts = text.split()
+
+    if len(parts) < 2:
+        return "Example: /repeat hello 3"
+
+    try:
+        count = int(parts[-1])
+        content = " ".join(parts[:-1])
+
+        if count < 1:
+            return "❌ Count must be at least 1."
+
+        if count > 20:
+            return "❌ Maximum repeat count is 20."
+
+        return "\n".join(
+            content
+            for _ in range(count)
+        )
+
+    except Exception:
+        return "Example: /repeat hello 3"
+
+
+# =========================================================
 # ASCII / BINARY / HEX
-# =========================
+# =========================================================
 
 def ascii_encode(text):
     if not text:
@@ -242,9 +334,9 @@ def rot13(text):
     )
 
 
-# =========================
+# =========================================================
 # MATH TOOLS
-# =========================
+# =========================================================
 
 def percentage(text):
     try:
@@ -458,9 +550,9 @@ def hex_to_number(text):
         return "Example: /fromhex FF"
 
 
-# =========================
+# =========================================================
 # EXTRA MATH TOOLS
-# =========================
+# =========================================================
 
 def square(text):
     try:
@@ -624,9 +716,9 @@ def range_numbers(text):
         return "❌ Enter numbers separated by spaces."
 
 
-# =========================
+# =========================================================
 # ENCODING / HASH
-# =========================
+# =========================================================
 
 def base64_encode(text):
     if not text:
@@ -722,9 +814,9 @@ def sha512_hash(text):
     ).hexdigest()
 
 
-# =========================
+# =========================================================
 # JSON
-# =========================
+# =========================================================
 
 def json_format(text):
     if not text:
@@ -773,104 +865,254 @@ def json_validate(text):
         return "❌ Invalid JSON."
 
 
-# =========================
-# EXTRA TEXT TOOLS
-# =========================
+# =========================================================
+# DEVELOPER TOOLS
+# =========================================================
 
-def trim_text(text):
-    if not text:
-        return "Give me some text."
+def regex_test(text):
+    parts = text.split(" ", 1)
 
-    return text.strip()
+    if len(parts) != 2:
+        return "Example: /regex ^hello hello world"
 
-
-def remove_digits(text):
-    if not text:
-        return "Give me some text."
-
-    return re.sub(r"\d", "", text)
-
-
-def remove_punctuation(text):
-    if not text:
-        return "Give me some text."
-
-    return text.translate(
-        str.maketrans("", "", string.punctuation)
-    )
-
-
-def digits_only(text):
-    if not text:
-        return "Give me some text."
-
-    return "".join(
-        char
-        for char in text
-        if char.isdigit()
-    )
-
-
-def letters_only(text):
-    if not text:
-        return "Give me some text."
-
-    return "".join(
-        char
-        for char in text
-        if char.isalpha()
-    )
-
-
-def alternating_case(text):
-    if not text:
-        return "Give me some text."
-
-    result = []
-    index = 0
-
-    for char in text:
-        if char.isalpha():
-            if index % 2 == 0:
-                result.append(char.upper())
-            else:
-                result.append(char.lower())
-
-            index += 1
-        else:
-            result.append(char)
-
-    return "".join(result)
-
-
-def repeat_text(text):
-    parts = text.split()
-
-    if len(parts) < 2:
-        return "Example: /repeat hello 3"
+    pattern = parts[0]
+    content = parts[1]
 
     try:
-        count = int(parts[-1])
-        content = " ".join(parts[:-1])
+        match = re.search(pattern, content)
 
-        if count < 1:
-            return "❌ Count must be at least 1."
+        if match:
+            return (
+                "🔎 Regex Match: YES\n"
+                f"Matched: {match.group(0)}\n"
+                f"Start: {match.start()}\n"
+                f"End: {match.end()}"
+            )
 
-        if count > 20:
-            return "❌ Maximum repeat count is 20."
+        return "🔎 Regex Match: NO"
 
-        return "\n".join(
-            content
-            for _ in range(count)
+    except re.error as error:
+        return f"❌ Invalid regex: {error}"
+
+
+def regex_findall(text):
+    parts = text.split(" ", 1)
+
+    if len(parts) != 2:
+        return "Example: /findall \\d+ My numbers are 12 and 45"
+
+    pattern = parts[0]
+    content = parts[1]
+
+    try:
+        matches = re.findall(pattern, content)
+
+        if not matches:
+            return "🔎 No matches found."
+
+        output = []
+
+        for index, match in enumerate(matches, 1):
+            if isinstance(match, tuple):
+                match = " | ".join(match)
+
+            output.append(
+                f"{index}. {match}"
+            )
+
+        return (
+            f"🔎 Matches: {len(matches)}\n\n"
+            + "\n".join(output)
+        )
+
+    except re.error as error:
+        return f"❌ Invalid regex: {error}"
+
+
+def html_escape(text):
+    if not text:
+        return "Give me some HTML/text."
+
+    return html.escape(
+        text,
+        quote=True
+    )
+
+
+def html_unescape(text):
+    if not text:
+        return "Give me HTML entities."
+
+    return html.unescape(text)
+
+
+def json_escape(text):
+    if not text:
+        return "Give me text."
+
+    return json.dumps(
+        text,
+        ensure_ascii=False
+    )
+
+
+def json_unescape(text):
+    if not text:
+        return "Give me JSON string."
+
+    try:
+        result = json.loads(text)
+
+        if not isinstance(result, str):
+            return "❌ Input is not a JSON string."
+
+        return result
+
+    except Exception:
+        return "❌ Invalid JSON string."
+
+
+def python_repr(text):
+    if not text:
+        return "Give me text."
+
+    return repr(text)
+
+
+def python_literal(text):
+    if not text:
+        return "Give me text."
+
+    return repr(text)
+
+
+def url_query_encode(text):
+    if not text:
+        return "Give me URL query text."
+
+    return quote(
+        text,
+        safe=""
+    )
+
+
+def url_query_decode(text):
+    if not text:
+        return "Give me encoded query text."
+
+    return unquote(text)
+
+
+def timestamp_now(text):
+    return (
+        f"⏱ Unix Timestamp: "
+        f"{int(datetime.now().timestamp())}"
+    )
+
+
+def timestamp_to_date(text):
+    try:
+        timestamp = int(text.strip())
+
+        result = datetime.fromtimestamp(
+            timestamp
+        )
+
+        return (
+            "📅 Date & Time\n\n"
+            f"{result.strftime('%Y-%m-%d %H:%M:%S')}"
         )
 
     except Exception:
-        return "Example: /repeat hello 3"
+        return "Example: /tstodate 1750000000"
 
 
-# =========================
+def date_to_timestamp(text):
+    try:
+        value = text.strip()
+
+        result = datetime.strptime(
+            value,
+            "%Y-%m-%d %H:%M:%S"
+        )
+
+        return (
+            f"⏱ Unix Timestamp: "
+            f"{int(result.timestamp())}"
+        )
+
+    except Exception:
+        return "Example: /datetots 2026-01-01 12:30:00"
+
+
+def color_hex_to_rgb(text):
+    value = text.strip().lstrip("#")
+
+    if not re.fullmatch(
+        r"[0-9a-fA-F]{6}",
+        value
+    ):
+        return "Example: /hextorgb #FF8800"
+
+    red = int(value[0:2], 16)
+    green = int(value[2:4], 16)
+    blue = int(value[4:6], 16)
+
+    return (
+        "🎨 RGB\n\n"
+        f"R: {red}\n"
+        f"G: {green}\n"
+        f"B: {blue}"
+    )
+
+
+def color_rgb_to_hex(text):
+    try:
+        parts = text.split()
+
+        if len(parts) != 3:
+            return "Example: /rgbtohex 255 128 0"
+
+        red = int(parts[0])
+        green = int(parts[1])
+        blue = int(parts[2])
+
+        if not all(
+            0 <= value <= 255
+            for value in (red, green, blue)
+        ):
+            return "❌ RGB values must be between 0 and 255."
+
+        result = (
+            f"#{red:02X}"
+            f"{green:02X}"
+            f"{blue:02X}"
+        )
+
+        return f"🎨 HEX: {result}"
+
+    except Exception:
+        return "Example: /rgbtohex 255 128 0"
+
+
+def csv_split(text):
+    if not text:
+        return "Give me comma-separated data."
+
+    values = [
+        value.strip()
+        for value in text.split(",")
+    ]
+
+    return "\n".join(
+        f"{index}. {value}"
+        for index, value in enumerate(values, 1)
+    )
+
+
+# =========================================================
 # RANDOM / GENERATORS
-# =========================
+# =========================================================
 
 def random_number(text):
     try:
@@ -904,7 +1146,10 @@ def random_choice(text):
     if not text:
         return "Example: /choose Apple Banana Orange"
 
-    return f"🎲 Selected: {random.choice(text.split())}"
+    return (
+        f"🎲 Selected: "
+        f"{random.choice(text.split())}"
+    )
 
 
 def uuid_generator(text):
@@ -959,22 +1204,28 @@ def random_password(text):
             for _ in range(length)
         )
 
-        return f"🔑 Random password:\n{password}"
+        return (
+            f"🔑 Random password:\n"
+            f"{password}"
+        )
 
     except Exception:
         return "Example: /password 16"
 
 
-# =========================
+# =========================================================
 # DATE TOOLS
-# =========================
+# =========================================================
 
 def date_difference(text):
     try:
         parts = text.split()
 
         if len(parts) != 2:
-            return "Example: /datediff 2026-01-01 2026-12-31"
+            return (
+                "Example: "
+                "/datediff 2026-01-01 2026-12-31"
+            )
 
         date1 = datetime.strptime(
             parts[0],
@@ -1000,7 +1251,10 @@ def add_days(text):
         parts = text.split()
 
         if len(parts) != 2:
-            return "Example: /adddays 2026-01-01 30"
+            return (
+                "Example: "
+                "/adddays 2026-01-01 30"
+            )
 
         date = datetime.strptime(
             parts[0],
@@ -1009,7 +1263,9 @@ def add_days(text):
 
         days = int(parts[1])
 
-        result = date + timedelta(days=days)
+        result = date + timedelta(
+            days=days
+        )
 
         return (
             f"📅 Result: "
@@ -1017,15 +1273,22 @@ def add_days(text):
         )
 
     except Exception:
-        return "❌ Example: /adddays 2026-01-01 30"
+        return (
+            "❌ Example: "
+            "/adddays 2026-01-01 30"
+        )
 
 
-# =========================
+# =========================================================
 # TOOL REGISTRY
-# =========================
+# =========================================================
 
 TOOLS = {
-    # Math
+
+    # -------------------------
+    # MATH
+    # -------------------------
+
     "calc": ("Calculator", calculator),
     "percent": ("Percentage Calculator", percentage),
     "average": ("Average Calculator", average),
@@ -1051,7 +1314,10 @@ TOOLS = {
     "median": ("Median Calculator", median),
     "range": ("Range Calculator", range_numbers),
 
-    # Text
+    # -------------------------
+    # TEXT
+    # -------------------------
+
     "upper": ("Uppercase", uppercase),
     "lower": ("Lowercase", lowercase),
     "title": ("Title Case", title_case),
@@ -1074,7 +1340,10 @@ TOOLS = {
     "altcase": ("Alternating Case", alternating_case),
     "repeat": ("Repeat Text", repeat_text),
 
-    # Encoding
+    # -------------------------
+    # ENCODING
+    # -------------------------
+
     "ascii": ("ASCII Encoder", ascii_encode),
     "asciidecode": ("ASCII Decoder", ascii_decode),
     "binary": ("Binary Encoder", binary_encode),
@@ -1087,7 +1356,10 @@ TOOLS = {
     "urlencode": ("URL Encoder", url_encode),
     "urldecode": ("URL Decoder", url_decode),
 
-    # Hash
+    # -------------------------
+    # HASH
+    # -------------------------
+
     "md5": ("MD5 Hash", md5_hash),
     "sha1": ("SHA-1 Hash", sha1_hash),
     "sha224": ("SHA-224 Hash", sha224_hash),
@@ -1095,21 +1367,54 @@ TOOLS = {
     "sha384": ("SHA-384 Hash", sha384_hash),
     "sha512": ("SHA-512 Hash", sha512_hash),
 
+    # -------------------------
     # JSON
+    # -------------------------
+
     "json": ("JSON Formatter", json_format),
     "jsonmin": ("JSON Minifier", json_minify),
     "jsoncheck": ("JSON Validator", json_validate),
 
-    # Random
+    # -------------------------
+    # DEVELOPER
+    # -------------------------
+
+    "regex": ("Regex Tester", regex_test),
+    "findall": ("Regex Find All", regex_findall),
+    "htmlescape": ("HTML Escape", html_escape),
+    "htmlunescape": ("HTML Unescape", html_unescape),
+    "jsonescape": ("JSON Escape", json_escape),
+    "jsonunescape": ("JSON Unescape", json_unescape),
+    "pyrepr": ("Python Repr", python_repr),
+    "pyliteral": ("Python Literal", python_literal),
+    "queryencode": ("Query Encoder", url_query_encode),
+    "querydecode": ("Query Decoder", url_query_decode),
+    "nowts": ("Current Timestamp", timestamp_now),
+    "tstodate": ("Timestamp To Date", timestamp_to_date),
+    "datetots": ("Date To Timestamp", date_to_timestamp),
+    "hextorgb": ("HEX To RGB", color_hex_to_rgb),
+    "rgbtohex": ("RGB To HEX", color_rgb_to_hex),
+    "csvsplit": ("CSV Splitter", csv_split),
+
+    # -------------------------
+    # RANDOM
+    # -------------------------
+
     "random": ("Random Number", random_number),
     "choose": ("Random Choice", random_choice),
 
-    # Generators
+    # -------------------------
+    # GENERATORS
+    # -------------------------
+
     "uuid": ("UUID Generator", uuid_generator),
     "uuids": ("Multiple UUID Generator", uuid_multiple),
     "password": ("Random Password Generator", random_password),
 
-    # Date
+    # -------------------------
+    # DATE
+    # -------------------------
+
     "datediff": ("Date Difference", date_difference),
     "adddays": ("Add Days To Date", add_days),
 }
