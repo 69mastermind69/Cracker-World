@@ -1,5 +1,4 @@
 import os
-import asyncio
 
 from fastapi import FastAPI
 from telegram import Update
@@ -10,6 +9,7 @@ from telegram.ext import (
 )
 
 from .config import BOT_TOKEN
+from .tools import TOOLS
 
 
 app = FastAPI(title="Cracker World")
@@ -23,7 +23,8 @@ async def start_command(
 ):
     await update.message.reply_text(
         "👋 Welcome to Cracker World!\n\n"
-        "Bot is online successfully! 🚀"
+        "Your bot is online! 🚀\n\n"
+        "Use /tools to see available tools."
     )
 
 
@@ -34,15 +35,88 @@ async def help_command(
     await update.message.reply_text(
         "🛠 Help\n\n"
         "/start - Start the bot\n"
-        "/help - Show help"
+        "/help - Show help\n"
+        "/tools - Show all tools\n\n"
+        "Example:\n"
+        "/calc 25*4"
     )
+
+
+async def tools_command(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE
+):
+    message = "🛠 CRACKER WORLD TOOLS\n\n"
+
+    for index, (tool_id, tool_data) in enumerate(
+        TOOLS.items(),
+        start=1
+    ):
+        tool_name = tool_data[0]
+
+        message += (
+            f"{index}. {tool_name}\n"
+            f"   /{tool_id}\n\n"
+        )
+
+    message += (
+        "💡 Example:\n"
+        "/calc 25*4+10\n\n"
+        "More tools will be added soon! 🚀"
+    )
+
+    await update.message.reply_text(message)
+
+
+async def tool_command(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE
+):
+    command = update.message.text.split()[0]
+    tool_id = command.lstrip("/")
+
+    if tool_id not in TOOLS:
+        await update.message.reply_text(
+            "❌ Unknown tool.\n"
+            "Use /tools to see available tools."
+        )
+        return
+
+    text = " ".join(context.args)
+
+    if not text:
+        await update.message.reply_text(
+            f"🛠 {TOOLS[tool_id][0]}\n\n"
+            f"Use:\n/{tool_id} <your text>"
+        )
+        return
+
+    function = TOOLS[tool_id][1]
+
+    try:
+        result = function(text)
+
+        await update.message.reply_text(
+            str(result)
+        )
+
+    except Exception as error:
+        await update.message.reply_text(
+            f"❌ Tool error: {error}"
+        )
 
 
 def create_bot():
     if not BOT_TOKEN:
-        raise RuntimeError("BOT_TOKEN is not configured.")
+        raise RuntimeError(
+            "BOT_TOKEN is not configured."
+        )
 
-    bot = Application.builder().token(BOT_TOKEN).build()
+    bot = (
+        Application.builder()
+        .token(BOT_TOKEN)
+        .build()
+    )
 
     bot.add_handler(
         CommandHandler("start", start_command)
@@ -51,6 +125,18 @@ def create_bot():
     bot.add_handler(
         CommandHandler("help", help_command)
     )
+
+    bot.add_handler(
+        CommandHandler("tools", tools_command)
+    )
+
+    for tool_id in TOOLS:
+        bot.add_handler(
+            CommandHandler(
+                tool_id,
+                tool_command
+            )
+        )
 
     return bot
 
@@ -94,7 +180,9 @@ async def health():
 if __name__ == "__main__":
     import uvicorn
 
-    port = int(os.getenv("PORT", "10000"))
+    port = int(
+        os.getenv("PORT", "10000")
+    )
 
     uvicorn.run(
         "app.main:app",
