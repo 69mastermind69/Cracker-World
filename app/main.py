@@ -1,3 +1,4 @@
+
 import os
 
 from fastapi import FastAPI
@@ -12,22 +13,21 @@ from telegram.ext import (
 from .config import BOT_TOKEN
 from .tools import TOOLS
 from .free_tools import FREE_TOOLS
-from .keyboards import tools_keyboard, category_keyboard
+from .keyboards import (
+    tools_keyboard,
+    category_keyboard,
+)
 
 
 # =========================================================
-# MERGE ALL TOOLS
+# COMBINE EXISTING + FREE TOOLS
 # =========================================================
-
-# Add the free offline tools to the existing tool registry.
-# Updating the existing dictionary also lets keyboards.py
-# see the same combined registry.
 
 TOOLS.update(FREE_TOOLS)
 
 
 # =========================================================
-# FASTAPI APP
+# FASTAPI
 # =========================================================
 
 app = FastAPI(
@@ -43,7 +43,7 @@ telegram_app = None
 
 async def start_command(
     update: Update,
-    context: ContextTypes.DEFAULT_TYPE
+    context: ContextTypes.DEFAULT_TYPE,
 ):
     if not update.message:
         return
@@ -57,7 +57,7 @@ async def start_command(
 
 async def help_command(
     update: Update,
-    context: ContextTypes.DEFAULT_TYPE
+    context: ContextTypes.DEFAULT_TYPE,
 ):
     if not update.message:
         return
@@ -73,7 +73,7 @@ async def help_command(
 
 async def tools_command(
     update: Update,
-    context: ContextTypes.DEFAULT_TYPE
+    context: ContextTypes.DEFAULT_TYPE,
 ):
     if not update.message:
         return
@@ -92,7 +92,7 @@ async def tools_command(
 
 async def category_button(
     update: Update,
-    context: ContextTypes.DEFAULT_TYPE
+    context: ContextTypes.DEFAULT_TYPE,
 ):
     query = update.callback_query
 
@@ -108,14 +108,14 @@ async def category_button(
 
     category_name = data.split(
         ":",
-        1
+        1,
     )[1]
 
     await query.edit_message_text(
         f"📂 {category_name}\n\n"
         "👇 Select a tool:",
         reply_markup=category_keyboard(
-            category_name
+            category_name,
         ),
     )
 
@@ -126,7 +126,7 @@ async def category_button(
 
 async def back_to_tools(
     update: Update,
-    context: ContextTypes.DEFAULT_TYPE
+    context: ContextTypes.DEFAULT_TYPE,
 ):
     query = update.callback_query
 
@@ -149,7 +149,7 @@ async def back_to_tools(
 
 async def tool_button(
     update: Update,
-    context: ContextTypes.DEFAULT_TYPE
+    context: ContextTypes.DEFAULT_TYPE,
 ):
     query = update.callback_query
 
@@ -165,7 +165,7 @@ async def tool_button(
 
     tool_id = data.split(
         ":",
-        1
+        1,
     )[1]
 
     if tool_id not in TOOLS:
@@ -191,7 +191,7 @@ async def tool_button(
 
 async def tool_command(
     update: Update,
-    context: ContextTypes.DEFAULT_TYPE
+    context: ContextTypes.DEFAULT_TYPE,
 ):
     if not update.message:
         return
@@ -207,6 +207,7 @@ async def tool_command(
         command
         .lstrip("/")
         .split("@")[0]
+        .lower()
     )
 
     if tool_id not in TOOLS:
@@ -217,7 +218,7 @@ async def tool_command(
         return
 
     text = " ".join(
-        context.args
+        context.args or []
     )
 
     if not text:
@@ -235,10 +236,11 @@ async def tool_command(
 
         result_text = str(result)
 
-        # Telegram messages have a practical length limit.
-        # Keep very large local-tool results manageable.
         if len(result_text) > 4000:
-            result_text = result_text[:4000] + "\n\n…output truncated."
+            result_text = (
+                result_text[:4000]
+                + "\n\n…output truncated."
+            )
 
         await update.message.reply_text(
             result_text
@@ -266,66 +268,73 @@ def create_bot():
             "BOT_TOKEN is not configured."
         )
 
-    bot = (
+    application = (
         Application
         .builder()
         .token(BOT_TOKEN)
         .build()
     )
 
+    # -------------------------
     # Basic commands
-    bot.add_handler(
+    # -------------------------
+
+    application.add_handler(
         CommandHandler(
             "start",
-            start_command
+            start_command,
         )
     )
 
-    bot.add_handler(
+    application.add_handler(
         CommandHandler(
             "help",
-            help_command
+            help_command,
         )
     )
 
-    bot.add_handler(
+    application.add_handler(
         CommandHandler(
             "tools",
-            tools_command
+            tools_command,
         )
     )
 
-    # Category buttons
-    bot.add_handler(
+    # -------------------------
+    # Callback buttons
+    # -------------------------
+
+    application.add_handler(
         CallbackQueryHandler(
             category_button,
-            pattern=r"^category:"
+            pattern=r"^category:",
         )
     )
 
-    # Back button
-    bot.add_handler(
+    application.add_handler(
         CallbackQueryHandler(
             back_to_tools,
-            pattern=r"^back:tools$"
+            pattern=r"^back:tools$",
         )
     )
 
-    # Tool buttons
-    bot.add_handler(
+    application.add_handler(
         CallbackQueryHandler(
             tool_button,
-            pattern=r"^tool:"
+            pattern=r"^tool:",
         )
     )
 
-    # Register every existing + free tool
+    # -------------------------
+    # Register tools
+    # -------------------------
+
     for tool_id in TOOLS:
 
-        bot.add_handler(
+        application.add_handler(
             CommandHandler(
                 tool_id,
-                tool_command
+                tool_command,
             )
         )
 
@@ -333,7 +342,7 @@ def create_bot():
         f"✅ Registered {len(TOOLS)} tools."
     )
 
-    return bot
+    return application
 
 
 # =========================================================
@@ -344,6 +353,14 @@ def create_bot():
 async def startup():
 
     global telegram_app
+
+    # Prevent accidental double initialization
+    # inside the same Python process.
+    if telegram_app is not None:
+        print(
+            "⚠️ Telegram application already started."
+        )
+        return
 
     telegram_app = create_bot()
 
@@ -356,7 +373,9 @@ async def startup():
             "Telegram updater is unavailable."
         )
 
-    await telegram_app.updater.start_polling()
+    await telegram_app.updater.start_polling(
+        drop_pending_updates=False,
+    )
 
     print(
         "✅ Telegram bot started successfully."
@@ -372,19 +391,24 @@ async def shutdown():
 
     global telegram_app
 
-    if not telegram_app:
+    if telegram_app is None:
         return
 
-    if telegram_app.updater is not None:
-        await telegram_app.updater.stop()
+    try:
 
-    await telegram_app.stop()
+        if telegram_app.updater is not None:
+            await telegram_app.updater.stop()
 
-    await telegram_app.shutdown()
+        await telegram_app.stop()
+        await telegram_app.shutdown()
 
-    print(
-        "🛑 Telegram bot stopped."
-    )
+    finally:
+
+        telegram_app = None
+
+        print(
+            "🛑 Telegram bot stopped."
+        )
 
 
 # =========================================================
@@ -421,7 +445,7 @@ if __name__ == "__main__":
     port = int(
         os.getenv(
             "PORT",
-            "10000"
+            "10000",
         )
     )
 
@@ -430,3 +454,4 @@ if __name__ == "__main__":
         host="0.0.0.0",
         port=port,
     )
+
