@@ -13,39 +13,70 @@ from .config import BOT_TOKEN
 from .tools import TOOLS
 from .keyboards import tools_keyboard
 
+
 app = FastAPI(title="Cracker World")
+
 telegram_app = None
 
 
-async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+# =========================
+# START COMMAND
+# =========================
+
+async def start_command(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE
+):
     await update.message.reply_text(
         "👋 Welcome to Cracker World!\n\n"
-        "Your bot is online! 🚀\n\n"
-        "Use /tools to open the tools menu."
+        "🚀 Your bot is online!\n\n"
+        "🛠 Use /tools to open the tools menu."
     )
 
 
-async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+# =========================
+# HELP COMMAND
+# =========================
+
+async def help_command(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE
+):
     await update.message.reply_text(
-        "🛠 Help\n\n"
+        "🛠 Cracker World Help\n\n"
         "/start - Start the bot\n"
         "/help - Show help\n"
-        "/tools - Show tools\n\n"
+        "/tools - Open tools menu\n\n"
         "Example:\n"
         "/calc 25*4"
     )
 
 
-async def tools_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+# =========================
+# TOOLS COMMAND
+# =========================
+
+async def tools_command(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE
+):
     await update.message.reply_text(
         "🛠 CRACKER WORLD TOOLS\n\n"
-        "Select a tool below:",
+        "👇 Select a tool:",
         reply_markup=tools_keyboard(),
     )
 
 
-async def tool_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
+# =========================
+# TOOL BUTTON
+# =========================
+
+async def tool_button(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE
+):
     query = update.callback_query
+
     await query.answer()
 
     data = query.data
@@ -56,25 +87,38 @@ async def tool_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     tool_id = data.split(":", 1)[1]
 
     if tool_id not in TOOLS:
-        await query.edit_message_text("❌ Tool not found.")
+        await query.edit_message_text(
+            "❌ Tool not found."
+        )
         return
 
     tool_name = TOOLS[tool_id][0]
 
     await query.edit_message_text(
         f"🛠 {tool_name}\n\n"
-        f"Command:\n"
+        f"Use this command:\n"
         f"/{tool_id} <your text>"
     )
 
 
-async def tool_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+# =========================
+# GENERIC TOOL COMMAND
+# =========================
+
+async def tool_command(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE
+):
+    if not update.message:
+        return
+
     command = update.message.text.split()[0]
-    tool_id = command.lstrip("/")
+
+    tool_id = command.lstrip("/").split("@")[0]
 
     if tool_id not in TOOLS:
         await update.message.reply_text(
-            "❌ Unknown tool.\n"
+            "❌ Unknown tool.\n\n"
             "Use /tools to see available tools."
         )
         return
@@ -84,7 +128,8 @@ async def tool_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not text:
         await update.message.reply_text(
             f"🛠 {TOOLS[tool_id][0]}\n\n"
-            f"Use:\n/{tool_id} <your text>"
+            f"Usage:\n"
+            f"/{tool_id} <your text>"
         )
         return
 
@@ -92,75 +137,153 @@ async def tool_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     try:
         result = function(text)
-        await update.message.reply_text(str(result))
-    except Exception as error:
+
         await update.message.reply_text(
-            f"❌ Tool error: {error}"
+            str(result)
+        )
+
+    except Exception:
+        await update.message.reply_text(
+            "❌ Something went wrong while running this tool."
         )
 
 
+# =========================
+# CREATE TELEGRAM BOT
+# =========================
+
 def create_bot():
+
     if not BOT_TOKEN:
-        raise RuntimeError("BOT_TOKEN is not configured.")
+        raise RuntimeError(
+            "BOT_TOKEN is not configured."
+        )
 
-    bot = Application.builder().token(BOT_TOKEN).build()
-
-    bot.add_handler(CommandHandler("start", start_command))
-    bot.add_handler(CommandHandler("help", help_command))
-    bot.add_handler(CommandHandler("tools", tools_command))
-
-    bot.add_handler(
-        CallbackQueryHandler(tool_button, pattern=r"^tool:")
+    bot = (
+        Application
+        .builder()
+        .token(BOT_TOKEN)
+        .build()
     )
 
+    # Basic commands
+    bot.add_handler(
+        CommandHandler(
+            "start",
+            start_command
+        )
+    )
+
+    bot.add_handler(
+        CommandHandler(
+            "help",
+            help_command
+        )
+    )
+
+    bot.add_handler(
+        CommandHandler(
+            "tools",
+            tools_command
+        )
+    )
+
+    # Inline button handler
+    bot.add_handler(
+        CallbackQueryHandler(
+            tool_button,
+            pattern=r"^tool:"
+        )
+    )
+
+    # All tools
     for tool_id in TOOLS:
+
         bot.add_handler(
-            CommandHandler(tool_id, tool_command)
+            CommandHandler(
+                tool_id,
+                tool_command
+            )
         )
 
     return bot
 
 
+# =========================
+# FASTAPI STARTUP
+# =========================
+
 @app.on_event("startup")
 async def startup():
+
     global telegram_app
 
     telegram_app = create_bot()
 
     await telegram_app.initialize()
+
     await telegram_app.start()
+
     await telegram_app.updater.start_polling()
 
 
+# =========================
+# FASTAPI SHUTDOWN
+# =========================
+
 @app.on_event("shutdown")
 async def shutdown():
+
     global telegram_app
 
     if telegram_app:
+
         await telegram_app.updater.stop()
+
         await telegram_app.stop()
+
         await telegram_app.shutdown()
 
 
+# =========================
+# WEB HOME
+# =========================
+
 @app.get("/")
 async def home():
+
     return {
         "status": "online",
         "bot": "Cracker World"
     }
 
 
+# =========================
+# HEALTH CHECK
+# =========================
+
 @app.get("/health")
 async def health():
+
     return {
         "status": "ok"
     }
 
 
+# =========================
+# RUN SERVER
+# =========================
+
 if __name__ == "__main__":
+
     import uvicorn
 
-    port = int(os.getenv("PORT", "10000"))
+    port = int(
+        os.getenv(
+            "PORT",
+            "10000"
+        )
+    )
 
     uvicorn.run(
         "app.main:app",
