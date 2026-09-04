@@ -3,56 +3,89 @@ from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 from .tools import TOOLS
 
 
+CATEGORIES = {
+    "🧮 Math": [
+        "calc",
+        "percent",
+        "average",
+        "minmax",
+        "evenodd",
+        "prime",
+        "gcd",
+        "lcm",
+        "factorial",
+        "fibonacci",
+        "tobinary",
+        "frombinary",
+        "tohex",
+        "fromhex",
+    ],
+
+    "🔤 Text": [
+        "upper",
+        "lower",
+        "title",
+        "sentence",
+        "reverse",
+        "spaces",
+        "emptylines",
+        "numberlines",
+        "count",
+        "chars",
+        "lines",
+        "stats",
+        "dedupe",
+        "sortlines",
+    ],
+
+    "🔐 Hash & Encoding": [
+        "ascii",
+        "asciidecode",
+        "binary",
+        "binarydecode",
+        "hex",
+        "hexdecode",
+        "rot13",
+        "md5",
+        "sha1",
+        "sha224",
+        "sha256",
+        "sha384",
+        "sha512",
+        "base64",
+        "base64decode",
+        "urlencode",
+        "urldecode",
+    ],
+
+    "📊 JSON & Data": [
+        "json",
+        "jsonmin",
+        "jsoncheck",
+    ],
+
+    "🎲 Random": [
+        "random",
+        "choose",
+    ],
+
+    "🆔 Generators": [
+        "uuid",
+        "uuids",
+        "password",
+    ],
+
+    "📅 Date": [
+        "datediff",
+        "adddays",
+    ],
+}
+
+
 def tools_keyboard():
     keyboard = []
 
-    categories = {
-        "🧮 Math": [
-            "calc",
-            "percent",
-            "average",
-            "minmax",
-        ],
-        "🔤 Text": [
-            "upper",
-            "lower",
-            "reverse",
-            "count",
-            "chars",
-            "lines",
-            "dedupe",
-            "sortlines",
-        ],
-        "🔐 Hash & Encoding": [
-            "b64encode",
-            "b64decode",
-            "urlencode",
-            "urldecode",
-            "md5",
-            "sha256",
-            "sha512",
-        ],
-        "📊 JSON & Data": [
-            "json",
-            "jsonmin",
-            "jsoncheck",
-        ],
-        "🎲 Random": [
-            "random",
-            "choose",
-        ],
-        "🆔 Generators": [
-            "uuid",
-            "uuids",
-            "password",
-        ],
-        "📅 Date": [
-            "datediff",
-            "adddays",
-        ],
-    }
-
-    for category_name, tool_ids in categories.items():
+    for category_name in CATEGORIES:
         keyboard.append([
             InlineKeyboardButton(
                 text=category_name,
@@ -64,53 +97,7 @@ def tools_keyboard():
 
 
 def category_keyboard(category_name):
-    categories = {
-        "🧮 Math": [
-            "calc",
-            "percent",
-            "average",
-            "minmax",
-        ],
-        "🔤 Text": [
-            "upper",
-            "lower",
-            "reverse",
-            "count",
-            "chars",
-            "lines",
-            "dedupe",
-            "sortlines",
-        ],
-        "🔐 Hash & Encoding": [
-            "b64encode",
-            "b64decode",
-            "urlencode",
-            "urldecode",
-            "md5",
-            "sha256",
-            "sha512",
-        ],
-        "📊 JSON & Data": [
-            "json",
-            "jsonmin",
-            "jsoncheck",
-        ],
-        "🎲 Random": [
-            "random",
-            "choose",
-        ],
-        "🆔 Generators": [
-            "uuid",
-            "uuids",
-            "password",
-        ],
-        "📅 Date": [
-            "datediff",
-            "adddays",
-        ],
-    }
-
-    tool_ids = categories.get(category_name, [])
+    tool_ids = CATEGORIES.get(category_name, [])
 
     keyboard = []
     row = []
