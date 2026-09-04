@@ -1,6 +1,7 @@
 import base64
 import hashlib
 import json
+import math
 import random
 import re
 import string
@@ -8,6 +9,10 @@ import uuid
 from datetime import datetime, timedelta
 from urllib.parse import quote, unquote
 
+
+# =========================
+# BASIC CALCULATOR
+# =========================
 
 def calculator(text):
     text = text.strip()
@@ -25,6 +30,10 @@ def calculator(text):
         return "❌ Invalid calculation."
 
 
+# =========================
+# TEXT TOOLS
+# =========================
+
 def uppercase(text):
     return text.upper() if text else "Give me some text."
 
@@ -33,8 +42,50 @@ def lowercase(text):
     return text.lower() if text else "Give me some text."
 
 
+def title_case(text):
+    return text.title() if text else "Give me some text."
+
+
+def sentence_case(text):
+    if not text:
+        return "Give me some text."
+
+    return text[:1].upper() + text[1:].lower()
+
+
 def reverse_text(text):
     return text[::-1] if text else "Give me some text."
+
+
+def remove_extra_spaces(text):
+    if not text:
+        return "Give me some text."
+
+    return re.sub(r"\s+", " ", text).strip()
+
+
+def remove_empty_lines(text):
+    if not text:
+        return "Give me some text."
+
+    lines = [
+        line for line in text.splitlines()
+        if line.strip()
+    ]
+
+    return "\n".join(lines)
+
+
+def number_lines(text):
+    if not text:
+        return "Give me multiple lines."
+
+    lines = text.splitlines()
+
+    return "\n".join(
+        f"{index}. {line}"
+        for index, line in enumerate(lines, start=1)
+    )
 
 
 def word_count(text):
@@ -64,6 +115,128 @@ def line_count(text):
     return f"📄 Lines: {len(text.splitlines())}"
 
 
+def text_statistics(text):
+    if not text:
+        return "Give me some text."
+
+    words = text.split()
+    lines = text.splitlines()
+    spaces = text.count(" ")
+    digits = sum(char.isdigit() for char in text)
+    letters = sum(char.isalpha() for char in text)
+
+    return (
+        "📊 Text Statistics\n\n"
+        f"Words: {len(words)}\n"
+        f"Characters: {len(text)}\n"
+        f"Lines: {len(lines)}\n"
+        f"Letters: {letters}\n"
+        f"Digits: {digits}\n"
+        f"Spaces: {spaces}"
+    )
+
+
+def duplicate_lines(text):
+    if not text:
+        return "Give me multiple lines."
+
+    seen = set()
+    result = []
+
+    for line in text.splitlines():
+        if line not in seen:
+            seen.add(line)
+            result.append(line)
+
+    return "\n".join(result)
+
+
+def sort_lines(text):
+    if not text:
+        return "Give me multiple lines."
+
+    return "\n".join(
+        sorted(text.splitlines(), key=str.lower)
+    )
+
+
+# =========================
+# ASCII / BINARY / HEX
+# =========================
+
+def ascii_encode(text):
+    if not text:
+        return "Give me some text."
+
+    return " ".join(str(ord(char)) for char in text)
+
+
+def ascii_decode(text):
+    try:
+        numbers = [int(x) for x in text.split()]
+
+        return "".join(chr(number) for number in numbers)
+
+    except Exception:
+        return "Example: /asciidecode 72 101 108 108 111"
+
+
+def binary_encode(text):
+    if not text:
+        return "Give me some text."
+
+    return " ".join(
+        format(byte, "08b")
+        for byte in text.encode("utf-8")
+    )
+
+
+def binary_decode(text):
+    try:
+        bits = text.split()
+
+        data = bytes(
+            int(bit, 2)
+            for bit in bits
+        )
+
+        return data.decode("utf-8")
+
+    except Exception:
+        return "❌ Invalid binary."
+
+
+def hex_encode(text):
+    if not text:
+        return "Give me some text."
+
+    return text.encode("utf-8").hex()
+
+
+def hex_decode(text):
+    try:
+        return bytes.fromhex(text).decode("utf-8")
+
+    except Exception:
+        return "❌ Invalid hexadecimal."
+
+
+def rot13(text):
+    if not text:
+        return "Give me some text."
+
+    return text.translate(
+        str.maketrans(
+            "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz",
+            "NOPQRSTUVWXYZABCDEFGHIJKLMnopqrstuvwxyzabcdefghijklm"
+        )
+    )
+
+
+# =========================
+# MATH TOOLS
+# =========================
+
 def percentage(text):
     try:
         parts = text.split()
@@ -77,9 +250,7 @@ def percentage(text):
         if total == 0:
             return "❌ Total cannot be zero."
 
-        result = (value / total) * 100
-
-        return f"📊 Percentage: {result:.2f}%"
+        return f"📊 Percentage: {(value / total) * 100:.2f}%"
 
     except Exception:
         return "❌ Invalid numbers."
@@ -92,9 +263,7 @@ def average(text):
         if not numbers:
             return "Example: /average 10 20 30"
 
-        result = sum(numbers) / len(numbers)
-
-        return f"📊 Average: {result:.2f}"
+        return f"📊 Average: {sum(numbers) / len(numbers):.2f}"
 
     except Exception:
         return "❌ Enter numbers separated by spaces."
@@ -115,6 +284,159 @@ def min_max(text):
     except Exception:
         return "❌ Enter numbers separated by spaces."
 
+
+def even_odd(text):
+    try:
+        number = int(text.strip())
+
+        return (
+            f"🔢 {number} is "
+            f"{'Even' if number % 2 == 0 else 'Odd'}."
+        )
+
+    except Exception:
+        return "Example: /evenodd 25"
+
+
+def prime_checker(text):
+    try:
+        number = int(text.strip())
+
+        if number < 2:
+            return f"❌ {number} is not prime."
+
+        for divisor in range(2, math.isqrt(number) + 1):
+            if number % divisor == 0:
+                return f"❌ {number} is not prime."
+
+        return f"✅ {number} is prime."
+
+    except Exception:
+        return "Example: /prime 29"
+
+
+def gcd_calculator(text):
+    try:
+        numbers = [int(x) for x in text.split()]
+
+        if len(numbers) < 2:
+            return "Example: /gcd 24 36"
+
+        result = numbers[0]
+
+        for number in numbers[1:]:
+            result = math.gcd(result, number)
+
+        return f"🧮 GCD: {result}"
+
+    except Exception:
+        return "❌ Enter integers."
+
+
+def lcm_calculator(text):
+    try:
+        numbers = [int(x) for x in text.split()]
+
+        if len(numbers) < 2:
+            return "Example: /lcm 12 18"
+
+        result = numbers[0]
+
+        for number in numbers[1:]:
+            result = math.lcm(result, number)
+
+        return f"🧮 LCM: {result}"
+
+    except Exception:
+        return "❌ Enter integers."
+
+
+def factorial(text):
+    try:
+        number = int(text.strip())
+
+        if number < 0:
+            return "❌ Number cannot be negative."
+
+        if number > 1000:
+            return "❌ Maximum value is 1000."
+
+        return f"🧮 {number}! = {math.factorial(number)}"
+
+    except Exception:
+        return "Example: /factorial 5"
+
+
+def fibonacci(text):
+    try:
+        count = int(text.strip()) if text.strip() else 10
+
+        if count < 1:
+            return "❌ Count must be at least 1."
+
+        if count > 50:
+            return "❌ Maximum 50 numbers."
+
+        sequence = []
+
+        a, b = 0, 1
+
+        for _ in range(count):
+            sequence.append(a)
+            a, b = b, a + b
+
+        return "🔢 Fibonacci:\n" + " ".join(
+            str(number)
+            for number in sequence
+        )
+
+    except Exception:
+        return "Example: /fibonacci 10"
+
+
+def number_to_binary(text):
+    try:
+        number = int(text.strip())
+
+        return f"🔢 Binary: {bin(number)[2:]}"
+
+    except Exception:
+        return "Example: /tobinary 25"
+
+
+def binary_to_number(text):
+    try:
+        number = int(text.strip(), 2)
+
+        return f"🔢 Decimal: {number}"
+
+    except Exception:
+        return "Example: /frombinary 11001"
+
+
+def number_to_hex(text):
+    try:
+        number = int(text.strip())
+
+        return f"🔢 Hex: {hex(number)[2:].upper()}"
+
+    except Exception:
+        return "Example: /tohex 255"
+
+
+def hex_to_number(text):
+    try:
+        number = int(text.strip(), 16)
+
+        return f"🔢 Decimal: {number}"
+
+    except Exception:
+        return "Example: /fromhex FF"
+
+
+# =========================
+# ENCODING / HASH
+# =========================
 
 def base64_encode(text):
     if not text:
@@ -155,6 +477,64 @@ def url_decode(text):
 
     return unquote(text)
 
+
+def md5_hash(text):
+    if not text:
+        return "Give me some text."
+
+    return hashlib.md5(
+        text.encode("utf-8")
+    ).hexdigest()
+
+
+def sha1_hash(text):
+    if not text:
+        return "Give me some text."
+
+    return hashlib.sha1(
+        text.encode("utf-8")
+    ).hexdigest()
+
+
+def sha224_hash(text):
+    if not text:
+        return "Give me some text."
+
+    return hashlib.sha224(
+        text.encode("utf-8")
+    ).hexdigest()
+
+
+def sha256_hash(text):
+    if not text:
+        return "Give me some text."
+
+    return hashlib.sha256(
+        text.encode("utf-8")
+    ).hexdigest()
+
+
+def sha384_hash(text):
+    if not text:
+        return "Give me some text."
+
+    return hashlib.sha384(
+        text.encode("utf-8")
+    ).hexdigest()
+
+
+def sha512_hash(text):
+    if not text:
+        return "Give me some text."
+
+    return hashlib.sha512(
+        text.encode("utf-8")
+    ).hexdigest()
+
+
+# =========================
+# JSON
+# =========================
 
 def json_format(text):
     if not text:
@@ -202,6 +582,10 @@ def json_validate(text):
         return "❌ Invalid JSON."
 
 
+# =========================
+# RANDOM / GENERATORS
+# =========================
+
 def random_number(text):
     try:
         parts = text.split()
@@ -222,9 +606,7 @@ def random_choice(text):
     if not text:
         return "Example: /choose Apple Banana Orange"
 
-    choices = text.split()
-
-    return f"🎲 Selected: {random.choice(choices)}"
+    return f"🎲 Selected: {random.choice(text.split())}"
 
 
 def uuid_generator(text):
@@ -239,77 +621,15 @@ def uuid_multiple(text):
             return "❌ Count must be at least 1."
 
         if count > 20:
-            return "❌ Maximum 20 UUIDs at once."
+            return "❌ Maximum 20 UUIDs."
 
-        result = "\n".join(
+        return "\n".join(
             str(uuid.uuid4())
             for _ in range(count)
         )
 
-        return f"🆔 UUIDs:\n{result}"
-
     except Exception:
         return "Example: /uuids 5"
-
-
-def md5_hash(text):
-    if not text:
-        return "Give me some text."
-
-    result = hashlib.md5(
-        text.encode("utf-8")
-    ).hexdigest()
-
-    return f"MD5:\n{result}"
-
-
-def sha256_hash(text):
-    if not text:
-        return "Give me some text."
-
-    result = hashlib.sha256(
-        text.encode("utf-8")
-    ).hexdigest()
-
-    return f"SHA-256:\n{result}"
-
-
-def sha512_hash(text):
-    if not text:
-        return "Give me some text."
-
-    result = hashlib.sha512(
-        text.encode("utf-8")
-    ).hexdigest()
-
-    return f"SHA-512:\n{result}"
-
-
-def duplicate_lines(text):
-    if not text:
-        return "Give me multiple lines."
-
-    lines = text.splitlines()
-    seen = set()
-    result = []
-
-    for line in lines:
-        if line not in seen:
-            seen.add(line)
-            result.append(line)
-
-    return "\n".join(result)
-
-
-def sort_lines(text):
-    if not text:
-        return "Give me multiple lines."
-
-    lines = text.splitlines()
-
-    return "\n".join(
-        sorted(lines, key=str.lower)
-    )
 
 
 def random_password(text):
@@ -339,6 +659,10 @@ def random_password(text):
         return "Example: /password 16"
 
 
+# =========================
+# DATE
+# =========================
+
 def date_difference(text):
     try:
         parts = text.split()
@@ -346,19 +670,10 @@ def date_difference(text):
         if len(parts) != 2:
             return "Example: /datediff 2026-01-01 2026-12-31"
 
-        date1 = datetime.strptime(
-            parts[0],
-            "%Y-%m-%d"
-        )
+        date1 = datetime.strptime(parts[0], "%Y-%m-%d")
+        date2 = datetime.strptime(parts[1], "%Y-%m-%d")
 
-        date2 = datetime.strptime(
-            parts[1],
-            "%Y-%m-%d"
-        )
-
-        difference = abs((date2 - date1).days)
-
-        return f"📅 Difference: {difference} days"
+        return f"📅 Difference: {abs((date2 - date1).days)} days"
 
     except Exception:
         return "❌ Use YYYY-MM-DD format."
@@ -371,11 +686,7 @@ def add_days(text):
         if len(parts) != 2:
             return "Example: /adddays 2026-01-01 30"
 
-        date = datetime.strptime(
-            parts[0],
-            "%Y-%m-%d"
-        )
-
+        date = datetime.strptime(parts[0], "%Y-%m-%d")
         days = int(parts[1])
 
         result = date + timedelta(days=days)
@@ -386,34 +697,75 @@ def add_days(text):
         return "❌ Example: /adddays 2026-01-01 30"
 
 
+# =========================
+# TOOL REGISTRY
+# =========================
+
 TOOLS = {
+    # Math
     "calc": ("Calculator", calculator),
-    "upper": ("Uppercase", uppercase),
-    "lower": ("Lowercase", lowercase),
-    "reverse": ("Reverse Text", reverse_text),
-    "count": ("Word Counter", word_count),
-    "chars": ("Character Counter", char_count),
-    "lines": ("Line Counter", line_count),
     "percent": ("Percentage Calculator", percentage),
     "average": ("Average Calculator", average),
     "minmax": ("Min Max Finder", min_max),
-    "b64encode": ("Base64 Encode", base64_encode),
-    "b64decode": ("Base64 Decode", base64_decode),
-    "urlencode": ("URL Encode", url_encode),
-    "urldecode": ("URL Decode", url_decode),
+    "evenodd": ("Even Odd Checker", even_odd),
+    "prime": ("Prime Checker", prime_checker),
+    "gcd": ("GCD Calculator", gcd_calculator),
+    "lcm": ("LCM Calculator", lcm_calculator),
+    "factorial": ("Factorial", factorial),
+    "fibonacci": ("Fibonacci", fibonacci),
+    "tobinary": ("Number To Binary", number_to_binary),
+    "frombinary": ("Binary To Number", binary_to_number),
+    "tohex": ("Number To Hex", number_to_hex),
+    "fromhex": ("Hex To Number", hex_to_number),
+
+    # Text
+    "upper": ("Uppercase", uppercase),
+    "lower": ("Lowercase", lowercase),
+    "title": ("Title Case", title_case),
+    "sentence": ("Sentence Case", sentence_case),
+    "reverse": ("Reverse Text", reverse_text),
+    "spaces": ("Remove Extra Spaces", remove_extra_spaces),
+    "emptylines": ("Remove Empty Lines", remove_empty_lines),
+    "numberlines": ("Line Numbering", number_lines),
+    "count": ("Word Counter", word_count),
+    "chars": ("Character Counter", char_count),
+    "lines": ("Line Counter", line_count),
+    "stats": ("Text Statistics", text_statistics),
+    "dedupe": ("Duplicate Line Remover", duplicate_lines),
+    "sortlines": ("Text Sorter", sort_lines),
+
+    # Encoding
+    "ascii": ("ASCII Encoder", ascii_encode),
+    "asciidecode": ("ASCII Decoder", ascii_decode),
+    "binary": ("Binary Encoder", binary_encode),
+    "binarydecode": ("Binary Decoder", binary_decode),
+    "hex": ("Hex Encoder", hex_encode),
+    "hexdecode": ("Hex Decoder", hex_decode),
+    "rot13": ("ROT13", rot13),
+
+    # Hash
+    "md5": ("MD5 Hash", md5_hash),
+    "sha1": ("SHA-1 Hash", sha1_hash),
+    "sha224": ("SHA-224 Hash", sha224_hash),
+    "sha256": ("SHA-256 Hash", sha256_hash),
+    "sha384": ("SHA-384 Hash", sha384_hash),
+    "sha512": ("SHA-512 Hash", sha512_hash),
+
+    # JSON
     "json": ("JSON Formatter", json_format),
     "jsonmin": ("JSON Minifier", json_minify),
     "jsoncheck": ("JSON Validator", json_validate),
+
+    # Random
     "random": ("Random Number", random_number),
     "choose": ("Random Choice", random_choice),
+
+    # Generators
     "uuid": ("UUID Generator", uuid_generator),
     "uuids": ("Multiple UUID Generator", uuid_multiple),
-    "md5": ("MD5 Hash", md5_hash),
-    "sha256": ("SHA-256 Hash", sha256_hash),
-    "sha512": ("SHA-512 Hash", sha512_hash),
-    "dedupe": ("Duplicate Line Remover", duplicate_lines),
-    "sortlines": ("Text Sorter", sort_lines),
     "password": ("Random Password Generator", random_password),
+
+    # Date
     "datediff": ("Date Difference", date_difference),
     "adddays": ("Add Days To Date", add_days),
 }
