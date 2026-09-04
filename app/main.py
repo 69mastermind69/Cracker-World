@@ -11,7 +11,7 @@ from telegram.ext import (
 
 from .config import BOT_TOKEN
 from .tools import TOOLS
-from .keyboards import tools_keyboard
+from .keyboards import tools_keyboard, category_keyboard
 
 
 app = FastAPI(title="Cracker World")
@@ -19,14 +19,7 @@ app = FastAPI(title="Cracker World")
 telegram_app = None
 
 
-# =========================
-# START COMMAND
-# =========================
-
-async def start_command(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE
-):
+async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "👋 Welcome to Cracker World!\n\n"
         "🚀 Your bot is online!\n\n"
@@ -34,49 +27,54 @@ async def start_command(
     )
 
 
-# =========================
-# HELP COMMAND
-# =========================
-
-async def help_command(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE
-):
+async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "🛠 Cracker World Help\n\n"
         "/start - Start the bot\n"
         "/help - Show help\n"
-        "/tools - Open tools menu\n\n"
-        "Example:\n"
-        "/calc 25*4"
+        "/tools - Open tools menu"
     )
 
 
-# =========================
-# TOOLS COMMAND
-# =========================
-
-async def tools_command(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE
-):
+async def tools_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "🛠 CRACKER WORLD TOOLS\n\n"
-        "👇 Select a tool:",
+        "👇 Select a category:",
         reply_markup=tools_keyboard(),
     )
 
 
-# =========================
-# TOOL BUTTON
-# =========================
-
-async def tool_button(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE
-):
+async def category_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
+    await query.answer()
 
+    data = query.data
+
+    if not data.startswith("category:"):
+        return
+
+    category_name = data.split(":", 1)[1]
+
+    await query.edit_message_text(
+        f"📂 {category_name}\n\n"
+        "👇 Select a tool:",
+        reply_markup=category_keyboard(category_name),
+    )
+
+
+async def back_to_tools(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+
+    await query.edit_message_text(
+        "🛠 CRACKER WORLD TOOLS\n\n"
+        "👇 Select a category:",
+        reply_markup=tools_keyboard(),
+    )
+
+
+async def tool_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
     await query.answer()
 
     data = query.data
@@ -97,18 +95,13 @@ async def tool_button(
     await query.edit_message_text(
         f"🛠 {tool_name}\n\n"
         f"Use this command:\n"
-        f"/{tool_id} <your text>"
+        f"/{tool_id} <your text>\n\n"
+        f"Example:\n"
+        f"/{tool_id} hello"
     )
 
 
-# =========================
-# GENERIC TOOL COMMAND
-# =========================
-
-async def tool_command(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE
-):
+async def tool_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message:
         return
 
@@ -148,10 +141,6 @@ async def tool_command(
         )
 
 
-# =========================
-# CREATE TELEGRAM BOT
-# =========================
-
 def create_bot():
 
     if not BOT_TOKEN:
@@ -166,29 +155,32 @@ def create_bot():
         .build()
     )
 
-    # Basic commands
     bot.add_handler(
-        CommandHandler(
-            "start",
-            start_command
+        CommandHandler("start", start_command)
+    )
+
+    bot.add_handler(
+        CommandHandler("help", help_command)
+    )
+
+    bot.add_handler(
+        CommandHandler("tools", tools_command)
+    )
+
+    bot.add_handler(
+        CallbackQueryHandler(
+            category_button,
+            pattern=r"^category:"
         )
     )
 
     bot.add_handler(
-        CommandHandler(
-            "help",
-            help_command
+        CallbackQueryHandler(
+            back_to_tools,
+            pattern=r"^back:tools$"
         )
     )
 
-    bot.add_handler(
-        CommandHandler(
-            "tools",
-            tools_command
-        )
-    )
-
-    # Inline button handler
     bot.add_handler(
         CallbackQueryHandler(
             tool_button,
@@ -196,9 +188,7 @@ def create_bot():
         )
     )
 
-    # All tools
     for tool_id in TOOLS:
-
         bot.add_handler(
             CommandHandler(
                 tool_id,
@@ -208,10 +198,6 @@ def create_bot():
 
     return bot
 
-
-# =========================
-# FASTAPI STARTUP
-# =========================
 
 @app.on_event("startup")
 async def startup():
@@ -227,10 +213,6 @@ async def startup():
     await telegram_app.updater.start_polling()
 
 
-# =========================
-# FASTAPI SHUTDOWN
-# =========================
-
 @app.on_event("shutdown")
 async def shutdown():
 
@@ -245,10 +227,6 @@ async def shutdown():
         await telegram_app.shutdown()
 
 
-# =========================
-# WEB HOME
-# =========================
-
 @app.get("/")
 async def home():
 
@@ -258,10 +236,6 @@ async def home():
     }
 
 
-# =========================
-# HEALTH CHECK
-# =========================
-
 @app.get("/health")
 async def health():
 
@@ -270,19 +244,12 @@ async def health():
     }
 
 
-# =========================
-# RUN SERVER
-# =========================
-
 if __name__ == "__main__":
 
     import uvicorn
 
     port = int(
-        os.getenv(
-            "PORT",
-            "10000"
-        )
+        os.getenv("PORT", "10000")
     )
 
     uvicorn.run(
