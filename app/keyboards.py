@@ -1,13 +1,8 @@
-```python
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 
 from .tools import TOOLS as OLD_TOOLS
 from .free_tools import FREE_TOOLS
 
-
-# =========================================================
-# ALL TOOLS
-# =========================================================
 
 TOOLS = {
     **OLD_TOOLS,
@@ -15,97 +10,54 @@ TOOLS = {
 }
 
 
-# =========================================================
-# TOOL CATEGORIES
-# =========================================================
-
 CATEGORIES = {
-
-    # -----------------------------------------------------
-    # EXISTING CATEGORIES
-    # -----------------------------------------------------
-
     "🧮 Math": [
-        "calc",
-        "percent",
-        "average",
-        "minmax",
-        "evenodd",
-        "prime",
-        "gcd",
-        "lcm",
-        "factorial",
-        "fibonacci",
-        "tobinary",
-        "frombinary",
-        "tohex",
-        "fromhex",
-        "square",
-        "cube",
-        "sqrt",
-        "power",
-        "abs",
-        "round",
-        "sum",
-        "product",
-        "median",
-        "range",
+        "calc", "percent", "average", "minmax",
+        "evenodd", "prime", "gcd", "lcm",
+        "factorial", "fibonacci", "tobinary",
+        "frombinary", "tohex", "fromhex",
+        "square", "cube", "sqrt", "power",
+        "abs", "round", "sum", "product",
+        "median", "range",
     ],
 
     "🔤 Text": [
-        "upper",
-        "lower",
-        "title",
-        "sentence",
-        "reverse",
-        "spaces",
-        "emptylines",
-        "numberlines",
-        "count",
-        "chars",
-        "lines",
-        "stats",
-        "dedupe",
-        "sortlines",
-        "trim",
-        "nodigits",
-        "nopunctuation",
-        "digits",
-        "letters",
-        "altcase",
-        "repeat",
+        "upper", "lower", "title", "sentence",
+        "reverse", "spaces", "emptylines",
+        "numberlines", "count", "chars", "lines",
+        "stats", "dedupe", "sortlines", "trim",
+        "nodigits", "nopunctuation", "digits",
+        "letters", "altcase", "repeat",
+
+        "textlen", "vowels", "consonants",
+        "digitcount", "spacecount", "punctcount",
+        "uppercount", "lowercount", "capitalize",
+        "swapcase", "center", "wrap",
+        "duplicatewords", "uniquewords",
+        "reversewords", "sortwords",
+        "wordfreq", "longestword", "shortestword",
+        "palindrome", "isogram", "anagram",
+        "removevowels", "removeconsonants",
+        "alphanumeric", "asciionly",
+        "newlinesto", "tabs",
+        "reverselines", "sortlines2",
+        "linelengths",
     ],
 
     "🔐 Hash & Encoding": [
-        "ascii",
-        "asciidecode",
-        "binary",
-        "binarydecode",
-        "hex",
-        "hexdecode",
+        "ascii", "asciidecode",
+        "binary", "binarydecode",
+        "hex", "hexdecode",
         "rot13",
-        "base64",
-        "base64decode",
-        "urlencode",
-        "urldecode",
-        "md5",
-        "sha1",
-        "sha224",
-        "sha256",
-        "sha384",
-        "sha512",
+        "base64", "base64decode",
+        "urlencode", "urldecode",
+        "md5", "sha1", "sha224",
+        "sha256", "sha384", "sha512",
 
-        # New free/offline hash & encoding tools
         "base32",
-        "base32decode",
         "base16",
-        "base16decode",
         "urlcomponent",
-        "urlcomponentdecode",
-        "htmlescape2",
-        "htmlunescape2",
-        "codepoints",
-        "unicodechars",
+        "unicode",
         "sha3_224",
         "sha3_256",
         "sha3_384",
@@ -138,8 +90,6 @@ CATEGORIES = {
         "json",
         "jsonmin",
         "jsoncheck",
-
-        # New free/offline data tools
         "jsonsort",
         "jsoncompact",
         "jsontype",
@@ -152,158 +102,79 @@ CATEGORIES = {
     "🎲 Random": [
         "random",
         "choose",
-
-        # New free/offline random tools
         "coin",
         "dice",
         "dices",
         "randomletter",
-        "randomlower",
-        "randomupper",
         "randomdigit",
         "randomcolor",
         "randomhex",
-        "uuidshort",
         "randombool",
+        "uuidshort",
     ],
 
     "🆔 Generators": [
         "uuid",
         "uuids",
         "password",
-
-        # New harmless generators
-        "uuidshort",
+        "uuidhex",
     ],
 
     "📅 Date": [
         "datediff",
         "adddays",
-
-        # New free/offline date tools
         "today",
         "datetime",
         "year",
         "month",
         "day",
         "weekday",
-        "leap",
-        "monthdays",
+        "leapyear",
+        "daysinmonth",
         "addhours",
         "addminutes",
-    ],
-
-    # -----------------------------------------------------
-    # NEW FREE CATEGORIES
-    # -----------------------------------------------------
-
-    "🆓 Free Text": [
-        "textlen",
-        "wordcount2",
-        "vowels",
-        "consonants",
-        "digitcount",
-        "spacecount",
-        "punctcount",
-        "uppercount",
-        "lowercount",
-        "capitalize",
-        "swapcase",
-        "center",
-        "wrap",
-        "duplicatewords",
-        "uniquewords",
-        "reversewords",
-        "sortwords",
-        "alphabetical",
-        "wordfreq",
-        "longestword",
-        "shortestword",
-        "palindrome",
-        "isogram",
-        "anagram",
-        "removevowels",
-        "removeconsonants",
-        "alphanumeric",
-        "keepascii",
-        "nonascii",
-        "normalizenewline",
-        "tabspace",
-        "spacetab",
-        "collapselines",
-        "reverselines",
-        "sortuniquelines",
-        "linelengths",
     ],
 
     "🔢 Free Numbers": [
-        "decbinary",
-        "decoctal",
-        "dechex",
-        "bindec",
-        "octdec",
-        "hexdec",
+        "decimalbin",
+        "decimaloct",
+        "decimalhex",
+        "bindecimal",
+        "binoctal",
         "binhex",
-        "hexbin",
+        "octdecimal",
+        "octbinary",
+        "octhex",
+        "hexdecimal",
+        "hexbinary",
+        "hexoctal",
         "digitsum",
-        "root",
+        "digitalroot",
         "factors",
         "primefactors",
-        "lcm2",
-        "gcd2",
         "distance",
         "percentchange",
         "proportion",
-        "mean2",
-        "median2",
-        "mode2",
+        "mean",
+        "mode",
         "variance",
         "stdev",
         "percentageof",
-        "addnums",
-        "mulnums",
-    ],
-
-    "📅 Free Date & Time": [
-        "today",
-        "datetime",
-        "year",
-        "month",
-        "day",
-        "weekday",
-        "leap",
-        "monthdays",
-        "addhours",
-        "addminutes",
+        "addnumbers",
+        "multiplynumbers",
     ],
 
     "🎨 Free Color": [
-        "rgbtohsl",
-        "hsltorgb",
+        "rgbhsl",
+        "hslrgb",
     ],
 }
 
-
-# =========================================================
-# MAIN TOOLS KEYBOARD
-# =========================================================
 
 def tools_keyboard():
     keyboard = []
 
     for category_name in CATEGORIES:
-
-        # Only show category if it contains
-        # at least one currently registered tool.
-        valid_tools = [
-            tool_id
-            for tool_id in CATEGORIES[category_name]
-            if tool_id in TOOLS
-        ]
-
-        if not valid_tools:
-            continue
-
         keyboard.append([
             InlineKeyboardButton(
                 text=category_name,
@@ -314,23 +185,13 @@ def tools_keyboard():
     return InlineKeyboardMarkup(keyboard)
 
 
-# =========================================================
-# CATEGORY KEYBOARD
-# =========================================================
-
 def category_keyboard(category_name):
-
-    tool_ids = CATEGORIES.get(
-        category_name,
-        []
-    )
+    tool_ids = CATEGORIES.get(category_name, [])
 
     keyboard = []
     row = []
 
     for tool_id in tool_ids:
-
-        # Skip tools that aren't registered.
         if tool_id not in TOOLS:
             continue
 
@@ -343,16 +204,13 @@ def category_keyboard(category_name):
             )
         )
 
-        # Two buttons per row.
         if len(row) == 2:
             keyboard.append(row)
             row = []
 
-    # Add remaining button.
     if row:
         keyboard.append(row)
 
-    # Back button.
     keyboard.append([
         InlineKeyboardButton(
             text="⬅️ Back",
@@ -361,4 +219,3 @@ def category_keyboard(category_name):
     ])
 
     return InlineKeyboardMarkup(keyboard)
-```
