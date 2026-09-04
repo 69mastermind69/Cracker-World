@@ -1,4 +1,3 @@
-```python
 import os
 
 from fastapi import FastAPI
@@ -17,11 +16,9 @@ from .keyboards import tools_keyboard, category_keyboard
 
 
 # =========================================================
-# TOOL REGISTRY
+# MERGE ALL TOOLS
 # =========================================================
 
-# Keep all existing tools
-# and add the new free/offline tools.
 TOOLS = {
     **OLD_TOOLS,
     **FREE_TOOLS,
@@ -29,7 +26,7 @@ TOOLS = {
 
 
 # =========================================================
-# FASTAPI APP
+# FASTAPI
 # =========================================================
 
 app = FastAPI(title="Cracker World")
@@ -38,7 +35,7 @@ telegram_app = None
 
 
 # =========================================================
-# START
+# TELEGRAM COMMANDS
 # =========================================================
 
 async def start_command(
@@ -50,15 +47,12 @@ async def start_command(
 
     await update.message.reply_text(
         "👋 Welcome to Cracker World!\n\n"
-        "🚀 Your bot is online!\n\n"
+        "🚀 Your bot is online!\n"
         "🆓 Free offline tools are available.\n\n"
-        "🛠 Use /tools to open the tools menu."
+        f"🛠 Total tools: {len(TOOLS)}\n\n"
+        "Use /tools to open the tools menu."
     )
 
-
-# =========================================================
-# HELP
-# =========================================================
 
 async def help_command(
     update: Update,
@@ -72,13 +66,10 @@ async def help_command(
         "/start - Start the bot\n"
         "/help - Show help\n"
         "/tools - Open tools menu\n\n"
-        f"🧰 Available tools: {len(TOOLS)}"
+        f"🛠 Total available tools: {len(TOOLS)}\n"
+        "🆓 Free tools work locally without paid APIs."
     )
 
-
-# =========================================================
-# TOOLS MENU
-# =========================================================
 
 async def tools_command(
     update: Update,
@@ -89,7 +80,7 @@ async def tools_command(
 
     await update.message.reply_text(
         "🛠 CRACKER WORLD TOOLS\n\n"
-        f"🧰 Total tools: {len(TOOLS)}\n\n"
+        f"📦 Total tools: {len(TOOLS)}\n\n"
         "👇 Select a category:",
         reply_markup=tools_keyboard(),
     )
@@ -125,7 +116,7 @@ async def category_button(
 
 
 # =========================================================
-# BACK TO TOOLS
+# BACK BUTTON
 # =========================================================
 
 async def back_to_tools(
@@ -141,7 +132,7 @@ async def back_to_tools(
 
     await query.edit_message_text(
         "🛠 CRACKER WORLD TOOLS\n\n"
-        f"🧰 Total tools: {len(TOOLS)}\n\n"
+        f"📦 Total tools: {len(TOOLS)}\n\n"
         "👇 Select a category:",
         reply_markup=tools_keyboard(),
     )
@@ -179,9 +170,9 @@ async def tool_button(
 
     await query.edit_message_text(
         f"🛠 {tool_name}\n\n"
-        f"Use this command:\n"
+        "Use this command:\n"
         f"/{tool_id} <your text>\n\n"
-        f"Example:\n"
+        "Example:\n"
         f"/{tool_id} hello"
     )
 
@@ -204,7 +195,7 @@ async def tool_command(
 
     command = message_text.split()[0]
 
-    tool_id = command.lstrip("/").split("@")[0].lower()
+    tool_id = command.lstrip("/").split("@")[0]
 
     if tool_id not in TOOLS:
         await update.message.reply_text(
@@ -218,7 +209,7 @@ async def tool_command(
     if not text:
         await update.message.reply_text(
             f"🛠 {TOOLS[tool_id][0]}\n\n"
-            f"Usage:\n"
+            "Usage:\n"
             f"/{tool_id} <your text>"
         )
         return
@@ -228,18 +219,22 @@ async def tool_command(
     try:
         result = function(text)
 
-        # Telegram messages have a practical size limit.
-        # Prevent very large tool results from causing errors.
         result_text = str(result)
 
+        # Telegram message limit protection
         if len(result_text) > 4000:
-            result_text = result_text[:3990] + "\n\n…"
+            result_text = result_text[:4000] + "\n\n...output truncated."
 
         await update.message.reply_text(
             result_text
         )
 
-    except Exception:
+    except Exception as error:
+        print(
+            f"Tool error [{tool_id}]: "
+            f"{type(error).__name__}: {error}"
+        )
+
         await update.message.reply_text(
             "❌ Something went wrong while running this tool."
         )
@@ -263,10 +258,7 @@ def create_bot():
         .build()
     )
 
-    # -----------------------------------------------------
-    # BASIC COMMANDS
-    # -----------------------------------------------------
-
+    # Basic commands
     bot.add_handler(
         CommandHandler(
             "start",
@@ -288,10 +280,7 @@ def create_bot():
         )
     )
 
-    # -----------------------------------------------------
-    # CATEGORY CALLBACK
-    # -----------------------------------------------------
-
+    # Category buttons
     bot.add_handler(
         CallbackQueryHandler(
             category_button,
@@ -299,10 +288,7 @@ def create_bot():
         )
     )
 
-    # -----------------------------------------------------
-    # BACK BUTTON
-    # -----------------------------------------------------
-
+    # Back button
     bot.add_handler(
         CallbackQueryHandler(
             back_to_tools,
@@ -310,10 +296,7 @@ def create_bot():
         )
     )
 
-    # -----------------------------------------------------
-    # TOOL BUTTON
-    # -----------------------------------------------------
-
+    # Tool buttons
     bot.add_handler(
         CallbackQueryHandler(
             tool_button,
@@ -321,12 +304,8 @@ def create_bot():
         )
     )
 
-    # -----------------------------------------------------
-    # REGISTER ALL TOOLS
-    # -----------------------------------------------------
-
+    # Register every tool as a Telegram command
     for tool_id in TOOLS:
-
         bot.add_handler(
             CommandHandler(
                 tool_id,
@@ -352,7 +331,8 @@ async def startup():
 
     await telegram_app.start()
 
-    await telegram_app.updater.start_polling()
+    if telegram_app.updater:
+        await telegram_app.updater.start_polling()
 
 
 # =========================================================
@@ -366,7 +346,8 @@ async def shutdown():
 
     if telegram_app:
 
-        await telegram_app.updater.stop()
+        if telegram_app.updater:
+            await telegram_app.updater.stop()
 
         await telegram_app.stop()
 
@@ -374,7 +355,7 @@ async def shutdown():
 
 
 # =========================================================
-# HOME
+# WEB ROUTES
 # =========================================================
 
 @app.get("/")
@@ -387,15 +368,12 @@ async def home():
     }
 
 
-# =========================================================
-# HEALTH CHECK
-# =========================================================
-
 @app.get("/health")
 async def health():
 
     return {
-        "status": "ok"
+        "status": "ok",
+        "tools": len(TOOLS),
     }
 
 
@@ -408,15 +386,11 @@ if __name__ == "__main__":
     import uvicorn
 
     port = int(
-        os.getenv(
-            "PORT",
-            "10000"
-        )
+        os.getenv("PORT", "10000")
     )
 
     uvicorn.run(
         "app.main:app",
         host="0.0.0.0",
-        port=port
+        port=port,
     )
-```
