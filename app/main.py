@@ -14,6 +14,8 @@ from .config import BOT_TOKEN
 
 app = FastAPI(title="Cracker World")
 
+telegram_app = None
+
 
 async def start_command(
     update: Update,
@@ -21,7 +23,7 @@ async def start_command(
 ):
     await update.message.reply_text(
         "👋 Welcome to Cracker World!\n\n"
-        "Your bot is online successfully! 🚀"
+        "Bot is online successfully! 🚀"
     )
 
 
@@ -38,9 +40,7 @@ async def help_command(
 
 def create_bot():
     if not BOT_TOKEN:
-        raise RuntimeError(
-            "BOT_TOKEN is not configured."
-        )
+        raise RuntimeError("BOT_TOKEN is not configured.")
 
     bot = Application.builder().token(BOT_TOKEN).build()
 
@@ -53,6 +53,27 @@ def create_bot():
     )
 
     return bot
+
+
+@app.on_event("startup")
+async def startup():
+    global telegram_app
+
+    telegram_app = create_bot()
+
+    await telegram_app.initialize()
+    await telegram_app.start()
+    await telegram_app.updater.start_polling()
+
+
+@app.on_event("shutdown")
+async def shutdown():
+    global telegram_app
+
+    if telegram_app:
+        await telegram_app.updater.stop()
+        await telegram_app.stop()
+        await telegram_app.shutdown()
 
 
 @app.get("/")
@@ -70,34 +91,10 @@ async def health():
     }
 
 
-async def run_bot():
-    bot = create_bot()
-
-    await bot.initialize()
-    await bot.start()
-    await bot.updater.start_polling()
-
-    try:
-        while True:
-            await asyncio.sleep(3600)
-    finally:
-        await bot.updater.stop()
-        await bot.stop()
-        await bot.shutdown()
-
-
-async def main():
-    await run_bot()
-
-
 if __name__ == "__main__":
     import uvicorn
 
-    port = int(
-        os.getenv("PORT", "8000")
-    )
-
-    asyncio.create_task(run_bot())
+    port = int(os.getenv("PORT", "10000"))
 
     uvicorn.run(
         "app.main:app",
