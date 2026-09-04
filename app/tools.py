@@ -168,14 +168,23 @@ def ascii_encode(text):
     if not text:
         return "Give me some text."
 
-    return " ".join(str(ord(char)) for char in text)
+    return " ".join(
+        str(ord(char))
+        for char in text
+    )
 
 
 def ascii_decode(text):
     try:
-        numbers = [int(x) for x in text.split()]
+        numbers = [
+            int(x)
+            for x in text.split()
+        ]
 
-        return "".join(chr(number) for number in numbers)
+        return "".join(
+            chr(number)
+            for number in numbers
+        )
 
     except Exception:
         return "Example: /asciidecode 72 101 108 108 111"
@@ -258,7 +267,10 @@ def percentage(text):
 
 def average(text):
     try:
-        numbers = [float(x) for x in text.split()]
+        numbers = [
+            float(x)
+            for x in text.split()
+        ]
 
         if not numbers:
             return "Example: /average 10 20 30"
@@ -271,7 +283,10 @@ def average(text):
 
 def min_max(text):
     try:
-        numbers = [float(x) for x in text.split()]
+        numbers = [
+            float(x)
+            for x in text.split()
+        ]
 
         if not numbers:
             return "Example: /minmax 5 10 2 8"
@@ -305,7 +320,10 @@ def prime_checker(text):
         if number < 2:
             return f"❌ {number} is not prime."
 
-        for divisor in range(2, math.isqrt(number) + 1):
+        for divisor in range(
+            2,
+            math.isqrt(number) + 1
+        ):
             if number % divisor == 0:
                 return f"❌ {number} is not prime."
 
@@ -317,7 +335,10 @@ def prime_checker(text):
 
 def gcd_calculator(text):
     try:
-        numbers = [int(x) for x in text.split()]
+        numbers = [
+            int(x)
+            for x in text.split()
+        ]
 
         if len(numbers) < 2:
             return "Example: /gcd 24 36"
@@ -335,7 +356,10 @@ def gcd_calculator(text):
 
 def lcm_calculator(text):
     try:
-        numbers = [int(x) for x in text.split()]
+        numbers = [
+            int(x)
+            for x in text.split()
+        ]
 
         if len(numbers) < 2:
             return "Example: /lcm 12 18"
@@ -432,6 +456,172 @@ def hex_to_number(text):
 
     except Exception:
         return "Example: /fromhex FF"
+
+
+# =========================
+# EXTRA MATH TOOLS
+# =========================
+
+def square(text):
+    try:
+        number = float(text.strip())
+
+        return f"🔢 Square: {number ** 2}"
+
+    except Exception:
+        return "Example: /square 12"
+
+
+def cube(text):
+    try:
+        number = float(text.strip())
+
+        return f"🔢 Cube: {number ** 3}"
+
+    except Exception:
+        return "Example: /cube 5"
+
+
+def square_root(text):
+    try:
+        number = float(text.strip())
+
+        if number < 0:
+            return "❌ Cannot calculate square root of a negative number."
+
+        return f"√ Square Root: {math.sqrt(number):.6f}"
+
+    except Exception:
+        return "Example: /sqrt 144"
+
+
+def power(text):
+    try:
+        parts = text.split()
+
+        if len(parts) != 2:
+            return "Example: /power 2 8"
+
+        base = float(parts[0])
+        exponent = float(parts[1])
+
+        return f"⚡ Result: {base ** exponent}"
+
+    except Exception:
+        return "❌ Invalid numbers."
+
+
+def absolute(text):
+    try:
+        number = float(text.strip())
+
+        return f"📏 Absolute Value: {abs(number)}"
+
+    except Exception:
+        return "Example: /abs -25"
+
+
+def round_number(text):
+    try:
+        parts = text.split()
+
+        if len(parts) == 1:
+            number = float(parts[0])
+            digits = 2
+
+        elif len(parts) == 2:
+            number = float(parts[0])
+            digits = int(parts[1])
+
+        else:
+            return "Example: /round 12.3456 2"
+
+        if digits < 0 or digits > 10:
+            return "❌ Decimal places must be between 0 and 10."
+
+        return f"🔢 Rounded: {round(number, digits)}"
+
+    except Exception:
+        return "Example: /round 12.3456 2"
+
+
+def sum_numbers(text):
+    try:
+        numbers = [
+            float(x)
+            for x in text.split()
+        ]
+
+        if not numbers:
+            return "Example: /sum 10 20 30"
+
+        return f"➕ Sum: {sum(numbers)}"
+
+    except Exception:
+        return "❌ Enter numbers separated by spaces."
+
+
+def product_numbers(text):
+    try:
+        numbers = [
+            float(x)
+            for x in text.split()
+        ]
+
+        if not numbers:
+            return "Example: /product 2 3 4"
+
+        result = 1
+
+        for number in numbers:
+            result *= number
+
+        return f"✖️ Product: {result}"
+
+    except Exception:
+        return "❌ Enter numbers separated by spaces."
+
+
+def median(text):
+    try:
+        numbers = sorted(
+            float(x)
+            for x in text.split()
+        )
+
+        if not numbers:
+            return "Example: /median 10 20 30"
+
+        middle = len(numbers) // 2
+
+        if len(numbers) % 2 == 0:
+            result = (
+                numbers[middle - 1]
+                + numbers[middle]
+            ) / 2
+        else:
+            result = numbers[middle]
+
+        return f"📊 Median: {result}"
+
+    except Exception:
+        return "❌ Enter numbers separated by spaces."
+
+
+def range_numbers(text):
+    try:
+        numbers = [
+            float(x)
+            for x in text.split()
+        ]
+
+        if not numbers:
+            return "Example: /range 5 10 2 20"
+
+        return f"📊 Range: {max(numbers) - min(numbers)}"
+
+    except Exception:
+        return "❌ Enter numbers separated by spaces."
 
 
 # =========================
@@ -576,10 +766,106 @@ def json_validate(text):
 
     try:
         json.loads(text)
+
         return "✅ Valid JSON."
 
     except Exception:
         return "❌ Invalid JSON."
+
+
+# =========================
+# EXTRA TEXT TOOLS
+# =========================
+
+def trim_text(text):
+    if not text:
+        return "Give me some text."
+
+    return text.strip()
+
+
+def remove_digits(text):
+    if not text:
+        return "Give me some text."
+
+    return re.sub(r"\d", "", text)
+
+
+def remove_punctuation(text):
+    if not text:
+        return "Give me some text."
+
+    return text.translate(
+        str.maketrans("", "", string.punctuation)
+    )
+
+
+def digits_only(text):
+    if not text:
+        return "Give me some text."
+
+    return "".join(
+        char
+        for char in text
+        if char.isdigit()
+    )
+
+
+def letters_only(text):
+    if not text:
+        return "Give me some text."
+
+    return "".join(
+        char
+        for char in text
+        if char.isalpha()
+    )
+
+
+def alternating_case(text):
+    if not text:
+        return "Give me some text."
+
+    result = []
+    index = 0
+
+    for char in text:
+        if char.isalpha():
+            if index % 2 == 0:
+                result.append(char.upper())
+            else:
+                result.append(char.lower())
+
+            index += 1
+        else:
+            result.append(char)
+
+    return "".join(result)
+
+
+def repeat_text(text):
+    parts = text.split()
+
+    if len(parts) < 2:
+        return "Example: /repeat hello 3"
+
+    try:
+        count = int(parts[-1])
+        content = " ".join(parts[:-1])
+
+        if count < 1:
+            return "❌ Count must be at least 1."
+
+        if count > 20:
+            return "❌ Maximum repeat count is 20."
+
+        return "\n".join(
+            content
+            for _ in range(count)
+        )
+
+    except Exception:
+        return "Example: /repeat hello 3"
 
 
 # =========================
@@ -590,13 +876,25 @@ def random_number(text):
     try:
         parts = text.split()
 
-        minimum = int(parts[0]) if len(parts) > 0 else 1
-        maximum = int(parts[1]) if len(parts) > 1 else 100
+        minimum = (
+            int(parts[0])
+            if len(parts) > 0
+            else 1
+        )
+
+        maximum = (
+            int(parts[1])
+            if len(parts) > 1
+            else 100
+        )
 
         if minimum > maximum:
             minimum, maximum = maximum, minimum
 
-        return f"🎲 Random number: {random.randint(minimum, maximum)}"
+        return (
+            f"🎲 Random number: "
+            f"{random.randint(minimum, maximum)}"
+        )
 
     except Exception:
         return "Example: /random 1 100"
@@ -615,7 +913,11 @@ def uuid_generator(text):
 
 def uuid_multiple(text):
     try:
-        count = int(text.strip()) if text.strip() else 5
+        count = (
+            int(text.strip())
+            if text.strip()
+            else 5
+        )
 
         if count < 1:
             return "❌ Count must be at least 1."
@@ -634,7 +936,11 @@ def uuid_multiple(text):
 
 def random_password(text):
     try:
-        length = int(text.strip()) if text.strip() else 12
+        length = (
+            int(text.strip())
+            if text.strip()
+            else 12
+        )
 
         if length < 4:
             return "❌ Minimum length is 4."
@@ -660,7 +966,7 @@ def random_password(text):
 
 
 # =========================
-# DATE
+# DATE TOOLS
 # =========================
 
 def date_difference(text):
@@ -670,10 +976,20 @@ def date_difference(text):
         if len(parts) != 2:
             return "Example: /datediff 2026-01-01 2026-12-31"
 
-        date1 = datetime.strptime(parts[0], "%Y-%m-%d")
-        date2 = datetime.strptime(parts[1], "%Y-%m-%d")
+        date1 = datetime.strptime(
+            parts[0],
+            "%Y-%m-%d"
+        )
 
-        return f"📅 Difference: {abs((date2 - date1).days)} days"
+        date2 = datetime.strptime(
+            parts[1],
+            "%Y-%m-%d"
+        )
+
+        return (
+            f"📅 Difference: "
+            f"{abs((date2 - date1).days)} days"
+        )
 
     except Exception:
         return "❌ Use YYYY-MM-DD format."
@@ -686,12 +1002,19 @@ def add_days(text):
         if len(parts) != 2:
             return "Example: /adddays 2026-01-01 30"
 
-        date = datetime.strptime(parts[0], "%Y-%m-%d")
+        date = datetime.strptime(
+            parts[0],
+            "%Y-%m-%d"
+        )
+
         days = int(parts[1])
 
         result = date + timedelta(days=days)
 
-        return f"📅 Result: {result.strftime('%Y-%m-%d')}"
+        return (
+            f"📅 Result: "
+            f"{result.strftime('%Y-%m-%d')}"
+        )
 
     except Exception:
         return "❌ Example: /adddays 2026-01-01 30"
@@ -717,6 +1040,16 @@ TOOLS = {
     "frombinary": ("Binary To Number", binary_to_number),
     "tohex": ("Number To Hex", number_to_hex),
     "fromhex": ("Hex To Number", hex_to_number),
+    "square": ("Square", square),
+    "cube": ("Cube", cube),
+    "sqrt": ("Square Root", square_root),
+    "power": ("Power Calculator", power),
+    "abs": ("Absolute Value", absolute),
+    "round": ("Round Number", round_number),
+    "sum": ("Sum Calculator", sum_numbers),
+    "product": ("Product Calculator", product_numbers),
+    "median": ("Median Calculator", median),
+    "range": ("Range Calculator", range_numbers),
 
     # Text
     "upper": ("Uppercase", uppercase),
@@ -733,6 +1066,13 @@ TOOLS = {
     "stats": ("Text Statistics", text_statistics),
     "dedupe": ("Duplicate Line Remover", duplicate_lines),
     "sortlines": ("Text Sorter", sort_lines),
+    "trim": ("Trim Text", trim_text),
+    "nodigits": ("Remove Digits", remove_digits),
+    "nopunctuation": ("Remove Punctuation", remove_punctuation),
+    "digits": ("Digits Only", digits_only),
+    "letters": ("Letters Only", letters_only),
+    "altcase": ("Alternating Case", alternating_case),
+    "repeat": ("Repeat Text", repeat_text),
 
     # Encoding
     "ascii": ("ASCII Encoder", ascii_encode),
@@ -742,6 +1082,10 @@ TOOLS = {
     "hex": ("Hex Encoder", hex_encode),
     "hexdecode": ("Hex Decoder", hex_decode),
     "rot13": ("ROT13", rot13),
+    "base64": ("Base64 Encoder", base64_encode),
+    "base64decode": ("Base64 Decoder", base64_decode),
+    "urlencode": ("URL Encoder", url_encode),
+    "urldecode": ("URL Decoder", url_decode),
 
     # Hash
     "md5": ("MD5 Hash", md5_hash),
