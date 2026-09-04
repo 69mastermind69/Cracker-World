@@ -5,18 +5,15 @@ from fastapi import FastAPI
 from telegram import Update
 from telegram.ext import (
     Application,
-    CommandHandler,
     CallbackQueryHandler,
+    CommandHandler,
     ContextTypes,
 )
 
 from .config import BOT_TOKEN
 from .tools import TOOLS
 from .free_tools import FREE_TOOLS
-from .keyboards import (
-    tools_keyboard,
-    category_keyboard,
-)
+from .keyboards import tools_keyboard, category_keyboard
 
 
 # =========================================================
@@ -30,9 +27,7 @@ TOOLS.update(FREE_TOOLS)
 # FASTAPI
 # =========================================================
 
-app = FastAPI(
-    title="Cracker World"
-)
+app = FastAPI(title="Cracker World")
 
 telegram_app = None
 
@@ -45,7 +40,7 @@ async def start_command(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE,
 ):
-    if not update.message:
+    if update.message is None:
         return
 
     await update.message.reply_text(
@@ -59,15 +54,14 @@ async def help_command(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE,
 ):
-    if not update.message:
+    if update.message is None:
         return
 
     await update.message.reply_text(
         "🛠 Cracker World Help\n\n"
         "/start - Start the bot\n"
         "/help - Show help\n"
-        "/tools - Open tools menu\n\n"
-        f"🧰 Available tools: {len(TOOLS)}"
+        "/tools - Open tools menu"
     )
 
 
@@ -75,12 +69,11 @@ async def tools_command(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE,
 ):
-    if not update.message:
+    if update.message is None:
         return
 
     await update.message.reply_text(
         "🛠 CRACKER WORLD TOOLS\n\n"
-        f"🧰 Total tools: {len(TOOLS)}\n\n"
         "👇 Select a category:",
         reply_markup=tools_keyboard(),
     )
@@ -96,7 +89,7 @@ async def category_button(
 ):
     query = update.callback_query
 
-    if not query:
+    if query is None:
         return
 
     await query.answer()
@@ -106,17 +99,12 @@ async def category_button(
     if not data.startswith("category:"):
         return
 
-    category_name = data.split(
-        ":",
-        1,
-    )[1]
+    category_name = data.split(":", 1)[1]
 
     await query.edit_message_text(
         f"📂 {category_name}\n\n"
         "👇 Select a tool:",
-        reply_markup=category_keyboard(
-            category_name,
-        ),
+        reply_markup=category_keyboard(category_name),
     )
 
 
@@ -130,14 +118,13 @@ async def back_to_tools(
 ):
     query = update.callback_query
 
-    if not query:
+    if query is None:
         return
 
     await query.answer()
 
     await query.edit_message_text(
         "🛠 CRACKER WORLD TOOLS\n\n"
-        f"🧰 Total tools: {len(TOOLS)}\n\n"
         "👇 Select a category:",
         reply_markup=tools_keyboard(),
     )
@@ -153,7 +140,7 @@ async def tool_button(
 ):
     query = update.callback_query
 
-    if not query:
+    if query is None:
         return
 
     await query.answer()
@@ -163,10 +150,7 @@ async def tool_button(
     if not data.startswith("tool:"):
         return
 
-    tool_id = data.split(
-        ":",
-        1,
-    )[1]
+    tool_id = data.split(":", 1)[1]
 
     if tool_id not in TOOLS:
         await query.edit_message_text(
@@ -193,7 +177,7 @@ async def tool_command(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE,
 ):
-    if not update.message:
+    if update.message is None:
         return
 
     message_text = update.message.text or ""
@@ -203,12 +187,7 @@ async def tool_command(
 
     command = message_text.split()[0]
 
-    tool_id = (
-        command
-        .lstrip("/")
-        .split("@")[0]
-        .lower()
-    )
+    tool_id = command.lstrip("/").split("@")[0]
 
     if tool_id not in TOOLS:
         await update.message.reply_text(
@@ -217,9 +196,7 @@ async def tool_command(
         )
         return
 
-    text = " ".join(
-        context.args or []
-    )
+    text = " ".join(context.args)
 
     if not text:
         await update.message.reply_text(
@@ -236,6 +213,7 @@ async def tool_command(
 
         result_text = str(result)
 
+        # Telegram message safety limit.
         if len(result_text) > 4000:
             result_text = (
                 result_text[:4000]
@@ -258,7 +236,7 @@ async def tool_command(
 
 
 # =========================================================
-# BOT CREATION
+# CREATE TELEGRAM APPLICATION
 # =========================================================
 
 def create_bot():
@@ -275,10 +253,7 @@ def create_bot():
         .build()
     )
 
-    # -------------------------
     # Basic commands
-    # -------------------------
-
     application.add_handler(
         CommandHandler(
             "start",
@@ -300,10 +275,7 @@ def create_bot():
         )
     )
 
-    # -------------------------
-    # Callback buttons
-    # -------------------------
-
+    # Category buttons
     application.add_handler(
         CallbackQueryHandler(
             category_button,
@@ -311,6 +283,7 @@ def create_bot():
         )
     )
 
+    # Back button
     application.add_handler(
         CallbackQueryHandler(
             back_to_tools,
@@ -318,6 +291,7 @@ def create_bot():
         )
     )
 
+    # Tool buttons
     application.add_handler(
         CallbackQueryHandler(
             tool_button,
@@ -325,10 +299,7 @@ def create_bot():
         )
     )
 
-    # -------------------------
-    # Register tools
-    # -------------------------
-
+    # Register every tool.
     for tool_id in TOOLS:
 
         application.add_handler(
@@ -354,18 +325,9 @@ async def startup():
 
     global telegram_app
 
-    # Prevent accidental double initialization
-    # inside the same Python process.
-    if telegram_app is not None:
-        print(
-            "⚠️ Telegram application already started."
-        )
-        return
-
     telegram_app = create_bot()
 
     await telegram_app.initialize()
-
     await telegram_app.start()
 
     if telegram_app.updater is None:
@@ -374,11 +336,11 @@ async def startup():
         )
 
     await telegram_app.updater.start_polling(
-        drop_pending_updates=False,
+        drop_pending_updates=True
     )
 
     print(
-        "✅ Telegram bot started successfully."
+        "✅ Telegram polling started."
     )
 
 
@@ -399,20 +361,20 @@ async def shutdown():
         if telegram_app.updater is not None:
             await telegram_app.updater.stop()
 
+    finally:
+
         await telegram_app.stop()
         await telegram_app.shutdown()
 
-    finally:
-
         telegram_app = None
 
-        print(
-            "🛑 Telegram bot stopped."
-        )
+    print(
+        "🛑 Telegram bot stopped."
+    )
 
 
 # =========================================================
-# WEB ROUTES
+# HEALTH ROUTES
 # =========================================================
 
 @app.get("/")
@@ -435,7 +397,7 @@ async def health():
 
 
 # =========================================================
-# LOCAL RUN
+# LOCAL / RENDER ENTRYPOINT
 # =========================================================
 
 if __name__ == "__main__":
@@ -454,4 +416,3 @@ if __name__ == "__main__":
         host="0.0.0.0",
         port=port,
     )
-
