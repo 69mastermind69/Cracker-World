@@ -1,17 +1,18 @@
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 
+from .tools import TOOLS
+
 
 def tools_keyboard():
     keyboard = []
-
     row = []
 
     for tool_id, tool_data in TOOLS.items():
-        name = tool_data[0]
+        tool_name = tool_data[0]
 
         row.append(
             InlineKeyboardButton(
-                name,
+                text=tool_name,
                 callback_data=f"tool:{tool_id}"
             )
         )
