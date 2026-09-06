@@ -44,13 +44,20 @@ from handlers.pdf import (
     handle_pdf_document,
     handle_protect_password,
     done_pdf,
-    handle_image,
 )
 
+from handlers.image import (
+    start_resize_image,
+    start_compress_image,
+    start_convert_image,
+    start_image_info,
+    start_image_to_pdf as start_image_tools_pdf,
+    handle_image as handle_image_tools,
+    handle_image_text,
+    handle_convert_format,
+    done_image_to_pdf,
+)
 
-# =========================================================
-# LOGGING
-# =========================================================
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -60,14 +67,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-# =========================================================
-# START COMMAND
-# =========================================================
-
-async def start(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE
-):
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data.clear()
 
     await update.message.reply_text(
@@ -77,14 +77,7 @@ async def start(
     )
 
 
-# =========================================================
-# ADMIN COMMAND
-# =========================================================
-
-async def admin(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE
-):
+async def admin(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.effective_user:
         return
 
@@ -101,13 +94,9 @@ async def admin(
     )
 
 
-# =========================================================
-# BUTTON HANDLER
-# =========================================================
-
 async def button_handler(
     update: Update,
-    context: ContextTypes.DEFAULT_TYPE
+    context: ContextTypes.DEFAULT_TYPE,
 ):
     query = update.callback_query
 
@@ -118,9 +107,9 @@ async def button_handler(
 
     data = query.data
 
-    # =====================================================
-    # HOME
-    # =====================================================
+    # =========================
+    # MAIN MENU
+    # =========================
 
     if data == "home":
         context.user_data.clear()
@@ -132,9 +121,9 @@ async def button_handler(
         )
         return
 
-    # =====================================================
-    # PDF MENU
-    # =====================================================
+    # =========================
+    # CATEGORY MENUS
+    # =========================
 
     if data == "pdf_menu":
         await query.edit_message_text(
@@ -144,10 +133,6 @@ async def button_handler(
         )
         return
 
-    # =====================================================
-    # IMAGE MENU
-    # =====================================================
-
     if data == "image_menu":
         await query.edit_message_text(
             "🖼️ Image Tools\n\n"
@@ -155,10 +140,6 @@ async def button_handler(
             reply_markup=image_menu(),
         )
         return
-
-    # =====================================================
-    # QR MENU
-    # =====================================================
 
     if data == "qr_menu":
         await query.edit_message_text(
@@ -168,10 +149,6 @@ async def button_handler(
         )
         return
 
-    # =====================================================
-    # AUDIO MENU
-    # =====================================================
-
     if data == "audio_menu":
         await query.edit_message_text(
             "🎙️ Audio Tools\n\n"
@@ -179,10 +156,6 @@ async def button_handler(
             reply_markup=audio_menu(),
         )
         return
-
-    # =====================================================
-    # FILE MENU
-    # =====================================================
 
     if data == "file_menu":
         await query.edit_message_text(
@@ -192,55 +165,93 @@ async def button_handler(
         )
         return
 
-    # =====================================================
-    # PDF FEATURES
-    # =====================================================
+    # =========================
+    # PDF TOOLS
+    # =========================
 
     if data == "text_to_pdf":
-        await start_text_to_pdf(
-            update,
-            context
-        )
+        await start_text_to_pdf(update, context)
         return
 
     if data == "image_to_pdf":
-        await start_image_to_pdf(
-            update,
-            context
-        )
+        await start_image_tools_pdf(update, context)
         return
 
     if data == "merge_pdf":
-        await start_merge_pdf(
-            update,
-            context
-        )
+        await start_merge_pdf(update, context)
         return
 
     if data == "split_pdf":
-        await start_split_pdf(
-            update,
-            context
-        )
+        await start_split_pdf(update, context)
         return
 
     if data == "pdf_to_text":
-        await start_pdf_to_text(
-            update,
-            context
-        )
+        await start_pdf_to_text(update, context)
         return
 
     if data == "protect_pdf":
-        await start_protect_pdf(
+        await start_protect_pdf(update, context)
+        return
+
+    # =========================
+    # IMAGE TOOLS
+    # =========================
+
+    if data == "resize_image":
+        await start_resize_image(update, context)
+        return
+
+    if data == "compress_image":
+        await start_compress_image(update, context)
+        return
+
+    if data == "convert_image":
+        await start_convert_image(update, context)
+        return
+
+    if data == "image_info":
+        await start_image_info(update, context)
+        return
+
+    # =========================
+    # IMAGE CONVERT FORMAT
+    # =========================
+
+    if data == "convert_jpg":
+        await handle_convert_format(
             update,
-            context
+            context,
+            "jpg",
         )
         return
 
-    # =====================================================
+    if data == "convert_png":
+        await handle_convert_format(
+            update,
+            context,
+            "png",
+        )
+        return
+
+    if data == "convert_webp":
+        await handle_convert_format(
+            update,
+            context,
+            "webp",
+        )
+        return
+
+    if data == "convert_bmp":
+        await handle_convert_format(
+            update,
+            context,
+            "bmp",
+        )
+        return
+
+    # =========================
     # DEVELOPER
-    # =====================================================
+    # =========================
 
     if data == "developer":
 
@@ -251,12 +262,14 @@ async def button_handler(
 
         if DEVELOPER_USERNAME:
             text += (
-                f"Telegram: {DEVELOPER_USERNAME}\n"
+                f"Telegram: "
+                f"{DEVELOPER_USERNAME}\n"
             )
 
         if DEVELOPER_CHANNEL:
             text += (
-                f"Channel: {DEVELOPER_CHANNEL}\n"
+                f"Channel: "
+                f"{DEVELOPER_CHANNEL}\n"
             )
 
         await query.edit_message_text(
@@ -266,12 +279,11 @@ async def button_handler(
                 DEVELOPER_CHANNEL,
             ),
         )
-
         return
 
-    # =====================================================
+    # =========================
     # HELP
-    # =====================================================
+    # =========================
 
     if data == "help":
 
@@ -279,15 +291,14 @@ async def button_handler(
             [
                 InlineKeyboardButton(
                     "🔙 Back",
-                    callback_data="home"
+                    callback_data="home",
                 )
             ]
         ])
 
         await query.edit_message_text(
             "ℹ️ Help\n\n"
-            "🤖 এই bot দিয়ে বিভিন্ন ধরনের file "
-            "processing করা যাবে।\n\n"
+
             "📄 PDF Tools\n"
             "• Text → PDF\n"
             "• Image → PDF\n"
@@ -295,26 +306,37 @@ async def button_handler(
             "• Split PDF\n"
             "• PDF → Text\n"
             "• Protect PDF\n\n"
+
             "🖼️ Image Tools\n"
             "• Resize\n"
             "• Compress\n"
-            "• Convert\n\n"
+            "• Convert\n"
+            "• Image Info\n"
+            "• Image → PDF\n\n"
+
             "🔳 QR Tools\n"
             "• QR Generator\n"
             "• QR Scanner\n\n"
+
             "🎙️ Audio Tools\n"
             "• Text → Voice\n"
             "• Voice Changer\n"
             "• Audio Converter\n\n"
+
+            "🛠️ File Tools\n"
+            "• ZIP\n"
+            "• Extract\n"
+            "• File Converter\n\n"
+
             "⚠️ কিছু feature এখনো development-এ আছে।",
+
             reply_markup=help_keyboard,
         )
-
         return
 
-    # =====================================================
-    # ADMIN FEATURES
-    # =====================================================
+    # =========================
+    # ADMIN
+    # =========================
 
     admin_features = {
         "admin_stats": "📊 Statistics",
@@ -342,22 +364,16 @@ async def button_handler(
             "database-এর সাথে connect করা হবে।",
             reply_markup=admin_menu(),
         )
-
         return
 
-    # =====================================================
+    # =========================
     # FUTURE FEATURES
-    # =====================================================
+    # =========================
 
     future_features = {
 
-        # Image
-        "resize_image": "📐 Resize Image",
-        "compress_image": "🗜️ Compress Image",
-        "convert_image": "🔄 Convert Image",
-        "image_info": "ℹ️ Image Info",
+        "pdf_to_image": "🖼️ PDF → Image",
 
-        # QR
         "qr_text": "📝 Text → QR",
         "qr_url": "🌐 URL → QR",
         "qr_wifi": "📶 Wi-Fi → QR",
@@ -367,7 +383,6 @@ async def button_handler(
         "qr_scan": "🔍 Scan QR",
         "qr_to_pdf": "📄 QR → PDF",
 
-        # Audio
         "text_to_voice": "🗣️ Text → Voice",
         "voice_changer": "🎭 Voice Changer",
         "audio_cutter": "✂️ Audio Cutter",
@@ -375,7 +390,6 @@ async def button_handler(
         "volume_changer": "🔊 Volume Changer",
         "audio_info": "ℹ️ Audio Info",
 
-        # Files
         "create_zip": "🗜️ Create ZIP",
         "extract_zip": "📦 Extract ZIP",
         "file_converter": "🔄 File Converter",
@@ -388,7 +402,7 @@ async def button_handler(
             [
                 InlineKeyboardButton(
                     "🔙 Back",
-                    callback_data="home"
+                    callback_data="home",
                 )
             ]
         ])
@@ -400,101 +414,120 @@ async def button_handler(
             "পরবর্তী ধাপে এটি তৈরি করা হবে।",
             reply_markup=back_keyboard,
         )
-
         return
 
-
-# =========================================================
-# TEXT MESSAGE HANDLER
-# =========================================================
 
 async def text_handler(
     update: Update,
-    context: ContextTypes.DEFAULT_TYPE
+    context: ContextTypes.DEFAULT_TYPE,
 ):
     if not update.message:
         return
 
-    # Text → PDF
-    if context.user_data.get("pdf_action") == "text_to_pdf":
+    # PDF Text → PDF
+    if context.user_data.get(
+        "pdf_action"
+    ) == "text_to_pdf":
 
         await handle_pdf_text(
             update,
-            context
+            context,
         )
-
         return
 
-    # Protect PDF password
-    if context.user_data.get("protect_pdf_path"):
+    # PDF Password
+    if context.user_data.get(
+        "protect_pdf_path"
+    ):
 
         await handle_protect_password(
             update,
-            context
+            context,
         )
+        return
 
+    # Image resize dimensions
+    if context.user_data.get(
+        "image_waiting_dimensions"
+    ):
+
+        await handle_image_text(
+            update,
+            context,
+        )
         return
 
 
-# =========================================================
-# PHOTO HANDLER
-# =========================================================
-
 async def photo_handler(
     update: Update,
-    context: ContextTypes.DEFAULT_TYPE
+    context: ContextTypes.DEFAULT_TYPE,
 ):
     if not update.message:
         return
 
-    if context.user_data.get("pdf_action") == "image_to_pdf":
+    # New Image Tools
+    if context.user_data.get(
+        "image_action"
+    ):
+
+        await handle_image_tools(
+            update,
+            context,
+        )
+        return
+
+    # Old PDF Image → PDF
+    if context.user_data.get(
+        "pdf_action"
+    ) == "image_to_pdf":
 
         await handle_image(
             update,
-            context
+            context,
         )
-
         return
 
 
-# =========================================================
-# DOCUMENT HANDLER
-# =========================================================
-
 async def document_handler(
     update: Update,
-    context: ContextTypes.DEFAULT_TYPE
+    context: ContextTypes.DEFAULT_TYPE,
 ):
     if not update.message:
         return
 
     await handle_pdf_document(
         update,
-        context
+        context,
     )
 
-
-# =========================================================
-# DONE COMMAND
-# =========================================================
 
 async def done_command(
     update: Update,
-    context: ContextTypes.DEFAULT_TYPE
+    context: ContextTypes.DEFAULT_TYPE,
 ):
+    # Image → PDF
+    if context.user_data.get(
+        "image_action"
+    ) == "image_to_pdf":
+
+        handled = await done_image_to_pdf(
+            update,
+            context,
+        )
+
+        if handled:
+            return
+
+    # PDF tools
     await done_pdf(
         update,
-        context
+        context,
     )
 
 
-# =========================================================
-# CANCEL COMMAND
-# =========================================================
-
 async def cancel_command(
     update: Update,
-    context: ContextTypes.DEFAULT_TYPE
+    context: ContextTypes.DEFAULT_TYPE,
 ):
     context.user_data.clear()
 
@@ -504,13 +537,9 @@ async def cancel_command(
     )
 
 
-# =========================================================
-# ERROR HANDLER
-# =========================================================
-
 async def error_handler(
     update: object,
-    context: ContextTypes.DEFAULT_TYPE
+    context: ContextTypes.DEFAULT_TYPE,
 ):
     logger.error(
         "Exception while handling update:",
@@ -518,15 +547,12 @@ async def error_handler(
     )
 
 
-# =========================================================
-# MAIN
-# =========================================================
-
 def main():
 
     if not BOT_TOKEN:
         raise RuntimeError(
-            "BOT_TOKEN environment variable পাওয়া যায়নি।"
+            "BOT_TOKEN environment variable "
+            "পাওয়া যায়নি।"
         )
 
     application = (
@@ -535,84 +561,60 @@ def main():
         .build()
     )
 
-    # -----------------------------------------------------
-    # Commands
-    # -----------------------------------------------------
-
     application.add_handler(
         CommandHandler(
             "start",
-            start
+            start,
         )
     )
 
     application.add_handler(
         CommandHandler(
             "admin",
-            admin
+            admin,
         )
     )
 
     application.add_handler(
         CommandHandler(
             "done",
-            done_command
+            done_command,
         )
     )
 
     application.add_handler(
         CommandHandler(
             "cancel",
-            cancel_command
+            cancel_command,
         )
     )
-
-    # -----------------------------------------------------
-    # Buttons
-    # -----------------------------------------------------
 
     application.add_handler(
         CallbackQueryHandler(
-            button_handler
+            button_handler,
         )
     )
-
-    # -----------------------------------------------------
-    # Photos
-    # -----------------------------------------------------
 
     application.add_handler(
         MessageHandler(
             filters.PHOTO,
-            photo_handler
+            photo_handler,
         )
     )
-
-    # -----------------------------------------------------
-    # Documents
-    # -----------------------------------------------------
 
     application.add_handler(
         MessageHandler(
             filters.Document.ALL,
-            document_handler
+            document_handler,
         )
     )
-
-    # -----------------------------------------------------
-    # Text
-    # -----------------------------------------------------
 
     application.add_handler(
         MessageHandler(
             filters.TEXT & ~filters.COMMAND,
-            text_handler
+            text_handler,
         )
     )
-
-    # -----------------------------------------------------
-    # Errors
-    # -----------------------------------------------------
 
     application.add_error_handler(
         error_handler
@@ -622,18 +624,10 @@ def main():
         "🚀 Telegram bot started successfully."
     )
 
-    # -----------------------------------------------------
-    # Start polling
-    # -----------------------------------------------------
-
     application.run_polling(
         allowed_updates=Update.ALL_TYPES
     )
 
-
-# =========================================================
-# RUN
-# =========================================================
 
 if __name__ == "__main__":
     main()
