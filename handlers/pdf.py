@@ -10,6 +10,7 @@ from services.pdf_service import (
     split_pdf,
     pdf_to_text,
     protect_pdf,
+    pdf_to_images,
 )
 
 from utils.files import (
@@ -18,16 +19,19 @@ from utils.files import (
 )
 
 
-# =========================
+# =========================================================
 # TEXT → PDF
-# =========================
+# =========================================================
 
 async def start_text_to_pdf(
     update: Update,
-    context: ContextTypes.DEFAULT_TYPE
+    context: ContextTypes.DEFAULT_TYPE,
 ):
     context.user_data.clear()
-    context.user_data["pdf_action"] = "text_to_pdf"
+
+    context.user_data[
+        "pdf_action"
+    ] = "text_to_pdf"
 
     await update.callback_query.message.reply_text(
         "📝 Text → PDF\n\n"
@@ -37,9 +41,17 @@ async def start_text_to_pdf(
 
 async def handle_pdf_text(
     update: Update,
-    context: ContextTypes.DEFAULT_TYPE
+    context: ContextTypes.DEFAULT_TYPE,
 ):
-    if context.user_data.get("pdf_action") != "text_to_pdf":
+    if context.user_data.get(
+        "pdf_action"
+    ) != "text_to_pdf":
+        return
+
+    if not update.message:
+        return
+
+    if not update.message.text:
         return
 
     text = update.message.text
@@ -51,47 +63,66 @@ async def handle_pdf_text(
         return
 
     folder = create_temp_dir()
-    output_path = os.path.join(folder, "document.pdf")
+
+    output_path = os.path.join(
+        folder,
+        "document.pdf",
+    )
 
     try:
         text_to_pdf(
             text,
             output_path,
-            title="Telegram Document"
+            title="Telegram Document",
         )
 
-        with open(output_path, "rb") as pdf:
+        with open(
+            output_path,
+            "rb",
+        ) as pdf:
+
             await update.message.reply_document(
                 document=pdf,
                 filename="document.pdf",
-                caption="✅ তোমার PDF তৈরি হয়েছে!"
+                caption="✅ তোমার PDF তৈরি হয়েছে!",
             )
 
     except Exception as error:
+
         await update.message.reply_text(
-            f"❌ PDF তৈরি করা যায়নি:\n{error}"
+            "❌ PDF তৈরি করা যায়নি:\n"
+            f"{error}"
         )
 
     finally:
+
         cleanup_temp_folder(folder)
         context.user_data.clear()
 
 
-# =========================
+# =========================================================
 # IMAGE → PDF
-# =========================
+# =========================================================
 
 async def start_image_to_pdf(
     update: Update,
-    context: ContextTypes.DEFAULT_TYPE
+    context: ContextTypes.DEFAULT_TYPE,
 ):
     context.user_data.clear()
 
     folder = create_temp_dir()
 
-    context.user_data["pdf_action"] = "image_to_pdf"
-    context.user_data["image_pdf_folder"] = folder
-    context.user_data["image_pdf_paths"] = []
+    context.user_data[
+        "pdf_action"
+    ] = "image_to_pdf"
+
+    context.user_data[
+        "image_pdf_folder"
+    ] = folder
+
+    context.user_data[
+        "image_pdf_paths"
+    ] = []
 
     await update.callback_query.message.reply_text(
         "🖼️ Image → PDF\n\n"
@@ -102,30 +133,62 @@ async def start_image_to_pdf(
 
 async def handle_image(
     update: Update,
-    context: ContextTypes.DEFAULT_TYPE
+    context: ContextTypes.DEFAULT_TYPE,
 ):
-    if context.user_data.get("pdf_action") != "image_to_pdf":
+    if context.user_data.get(
+        "pdf_action"
+    ) != "image_to_pdf":
         return
 
-    folder = context.user_data.get("image_pdf_folder")
+    if not update.message:
+        return
+
+    if not update.message.photo:
+        return
+
+    folder = context.user_data.get(
+        "image_pdf_folder"
+    )
 
     if not folder:
         return
 
     photo = update.message.photo[-1]
 
+    image_number = (
+        len(
+            context.user_data.get(
+                "image_pdf_paths",
+                [],
+            )
+        )
+        + 1
+    )
+
     file_path = os.path.join(
         folder,
-        f"image_{len(context.user_data['image_pdf_paths']) + 1}.jpg"
+        f"image_{image_number}.jpg",
     )
 
     try:
+
         telegram_file = await photo.get_file()
-        await telegram_file.download_to_drive(file_path)
 
-        context.user_data["image_pdf_paths"].append(file_path)
+        await telegram_file.download_to_drive(
+            file_path
+        )
 
-        count = len(context.user_data["image_pdf_paths"])
+        context.user_data[
+            "image_pdf_paths"
+        ].append(
+            file_path
+        )
+
+        count = len(
+            context.user_data[
+                "image_pdf_paths"
+            ]
+        )
 
         await update.message.reply_text(
             f"✅ Image {count} যোগ হয়েছে।\n\n"
@@ -134,33 +197,48 @@ async def handle_image(
         )
 
     except Exception as error:
+
         await update.message.reply_text(
-            f"❌ Image save করা যায়নি:\n{error}"
+            "❌ Image save করা যায়নি:\n"
+            f"{error}"
         )
 
 
-# =========================
+# =========================================================
 # DONE
-# =========================
+# =========================================================
 
 async def done_pdf(
     update: Update,
-    context: ContextTypes.DEFAULT_TYPE
+    context: ContextTypes.DEFAULT_TYPE,
 ):
-    action = context.user_data.get("pdf_action")
+    action = context.user_data.get(
+        "pdf_action"
+    )
 
-    # -------------------------
-    # Image → PDF
-    # -------------------------
+    # -----------------------------------------------------
+    # IMAGE → PDF
+    # -----------------------------------------------------
 
     if action == "image_to_pdf":
-        folder = context.user_data.get("image_pdf_folder")
-        image_paths = context.user_data.get(
-            "image_pdf_paths",
-            []
+
+        folder = context.user_data.get(
+            "image_pdf_folder"
         )
 
+        image_paths = context.user_data.get(
+            "image_pdf_paths",
+            [],
+        )
+
+        if not folder:
+            await update.message.reply_text(
+                "⚠️ Image → PDF task পাওয়া যায়নি।"
+            )
+            return
+
         if not image_paths:
+
             await update.message.reply_text(
                 "⚠️ কোনো image পাওয়া যায়নি।"
             )
@@ -168,75 +246,114 @@ async def done_pdf(
 
         output_path = os.path.join(
             folder,
-            "images.pdf"
+            "images.pdf",
         )
 
         try:
+
             images_to_pdf(
                 image_paths,
-                output_path
+                output_path,
             )
 
-            with open(output_path, "rb") as pdf:
+            with open(
+                output_path,
+                "rb",
+            ) as pdf:
+
                 await update.message.reply_document(
                     document=pdf,
                     filename="images.pdf",
-                    caption="✅ Images থেকে PDF তৈরি হয়েছে!"
+                    caption=(
+                        "✅ Images থেকে PDF তৈরি হয়েছে!"
+                    ),
                 )
 
         except Exception as error:
+
             await update.message.reply_text(
-                f"❌ PDF তৈরি করা যায়নি:\n{error}"
+                "❌ PDF তৈরি করা যায়নি:\n"
+                f"{error}"
             )
 
         finally:
-            cleanup_temp_folder(folder)
+
+            cleanup_temp_folder(
+                folder
+            )
+
             context.user_data.clear()
 
         return
 
-    # -------------------------
-    # Merge PDF
-    # -------------------------
+    # -----------------------------------------------------
+    # MERGE PDF
+    # -----------------------------------------------------
 
     if action == "merge_pdf":
-        folder = context.user_data.get("merge_pdf_folder")
-        pdf_paths = context.user_data.get(
-            "merge_pdf_paths",
-            []
+
+        folder = context.user_data.get(
+            "merge_pdf_folder"
         )
 
-        if len(pdf_paths) < 2:
+        pdf_paths = context.user_data.get(
+            "merge_pdf_paths",
+            [],
+        )
+
+        if not folder:
             await update.message.reply_text(
-                "⚠️ Merge করার জন্য অন্তত ২টি PDF পাঠাও।"
+                "⚠️ Merge PDF task পাওয়া যায়নি।"
+            )
+            return
+
+        if len(pdf_paths) < 2:
+
+            await update.message.reply_text(
+                "⚠️ Merge করার জন্য "
+                "অন্তত ২টি PDF পাঠাও।"
             )
             return
 
         output_path = os.path.join(
             folder,
-            "merged.pdf"
+            "merged.pdf",
         )
 
         try:
+
             merge_pdfs(
                 pdf_paths,
-                output_path
+                output_path,
             )
 
-            with open(output_path, "rb") as pdf:
+            with open(
+                output_path,
+                "rb",
+            ) as pdf:
+
                 await update.message.reply_document(
                     document=pdf,
                     filename="merged.pdf",
-                    caption="✅ PDFs successfully merge হয়েছে!"
+                    caption=(
+                        "✅ PDFs successfully "
+                        "merge হয়েছে!"
+                    ),
                 )
 
         except Exception as error:
+
             await update.message.reply_text(
-                f"❌ PDF merge করা যায়নি:\n{error}"
+                "❌ PDF merge করা যায়নি:\n"
+                f"{error}"
             )
 
         finally:
-            cleanup_temp_folder(folder)
+
+            cleanup_temp_folder(
+                folder
+            )
+
             context.user_data.clear()
 
         return
@@ -246,21 +363,29 @@ async def done_pdf(
     )
 
 
-# =========================
+# =========================================================
 # MERGE PDF
-# =========================
+# =========================================================
 
 async def start_merge_pdf(
     update: Update,
-    context: ContextTypes.DEFAULT_TYPE
+    context: ContextTypes.DEFAULT_TYPE,
 ):
     context.user_data.clear()
 
     folder = create_temp_dir()
 
-    context.user_data["pdf_action"] = "merge_pdf"
-    context.user_data["merge_pdf_folder"] = folder
-    context.user_data["merge_pdf_paths"] = []
+    context.user_data[
+        "pdf_action"
+    ] = "merge_pdf"
+
+    context.user_data[
+        "merge_pdf_folder"
+    ] = folder
+
+    context.user_data[
+        "merge_pdf_paths"
+    ] = []
 
     await update.callback_query.message.reply_text(
         "📚 Merge PDF\n\n"
@@ -269,16 +394,19 @@ async def start_merge_pdf(
     )
 
 
-# =========================
+# =========================================================
 # SPLIT PDF
-# =========================
+# =========================================================
 
 async def start_split_pdf(
     update: Update,
-    context: ContextTypes.DEFAULT_TYPE
+    context: ContextTypes.DEFAULT_TYPE,
 ):
     context.user_data.clear()
-    context.user_data["pdf_action"] = "split_pdf"
+
+    context.user_data[
+        "pdf_action"
+    ] = "split_pdf"
 
     await update.callback_query.message.reply_text(
         "✂️ Split PDF\n\n"
@@ -286,16 +414,19 @@ async def start_split_pdf(
     )
 
 
-# =========================
+# =========================================================
 # PDF → TEXT
-# =========================
+# =========================================================
 
 async def start_pdf_to_text(
     update: Update,
-    context: ContextTypes.DEFAULT_TYPE
+    context: ContextTypes.DEFAULT_TYPE,
 ):
     context.user_data.clear()
-    context.user_data["pdf_action"] = "pdf_to_text"
+
+    context.user_data[
+        "pdf_action"
+    ] = "pdf_to_text"
 
     await update.callback_query.message.reply_text(
         "📄 PDF → Text\n\n"
@@ -303,16 +434,139 @@ async def start_pdf_to_text(
     )
 
 
-# =========================
+# =========================================================
+# PDF → IMAGE
+# =========================================================
+
+async def start_pdf_to_image(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+):
+    context.user_data.clear()
+
+    context.user_data[
+        "pdf_action"
+    ] = "pdf_to_image"
+
+    await update.callback_query.message.reply_text(
+        "🖼️ PDF → Image\n\n"
+        "একটি PDF file পাঠাও।\n\n"
+        "প্রতিটি page আলাদা PNG image "
+        "হিসেবে পাবে।"
+    )
+
+
+async def handle_pdf_to_image(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+):
+    if not update.message:
+        return
+
+    document = update.message.document
+
+    if not document:
+        return
+
+    filename = (
+        document.file_name
+        or "input.pdf"
+    )
+
+    if not filename.lower().endswith(
+        ".pdf"
+    ):
+
+        await update.message.reply_text(
+            "❌ দয়া করে একটি PDF file পাঠাও।"
+        )
+        return
+
+    folder = create_temp_dir()
+
+    input_path = os.path.join(
+        folder,
+        "input.pdf",
+    )
+
+    image_dir = os.path.join(
+        folder,
+        "images",
+    )
+
+    try:
+
+        telegram_file = (
+            await document.get_file()
+        )
+
+        await telegram_file.download_to_drive(
+            input_path
+        )
+
+        output_files = pdf_to_images(
+            input_path,
+            image_dir,
+            dpi=150,
+        )
+
+        if not output_files:
+
+            raise RuntimeError(
+                "PDF থেকে কোনো page image "
+                "তৈরি করা যায়নি।"
+            )
+
+        for index, image_path in enumerate(
+            output_files,
+            start=1,
+        ):
+
+            with open(
+                image_path,
+                "rb",
+            ) as image_file:
+
+                await update.message.reply_document(
+                    document=image_file,
+                    filename=f"page_{index}.png",
+                )
+
+        await update.message.reply_text(
+            "✅ PDF → Image complete!\n\n"
+            f"📄 মোট {len(output_files)}টি "
+            "page image হিসেবে তৈরি হয়েছে।"
+        )
+
+    except Exception as error:
+
+        await update.message.reply_text(
+            "❌ PDF → Image করা যায়নি:\n"
+            f"{error}"
+        )
+
+    finally:
+
+        cleanup_temp_folder(
+            folder
+        )
+
+        context.user_data.clear()
+
+
+# =========================================================
 # PROTECT PDF
-# =========================
+# =========================================================
 
 async def start_protect_pdf(
     update: Update,
-    context: ContextTypes.DEFAULT_TYPE
+    context: ContextTypes.DEFAULT_TYPE,
 ):
     context.user_data.clear()
-    context.user_data["pdf_action"] = "protect_pdf"
+
+    context.user_data[
+        "pdf_action"
+    ] = "protect_pdf"
 
     await update.callback_query.message.reply_text(
         "🔐 Protect PDF\n\n"
@@ -321,15 +575,20 @@ async def start_protect_pdf(
     )
 
 
-# =========================
+# =========================================================
 # PDF DOCUMENT HANDLER
-# =========================
+# =========================================================
 
 async def handle_pdf_document(
     update: Update,
-    context: ContextTypes.DEFAULT_TYPE
+    context: ContextTypes.DEFAULT_TYPE,
 ):
-    action = context.user_data.get("pdf_action")
+    if not update.message:
+        return
+
+    action = context.user_data.get(
+        "pdf_action"
+    )
 
     if action not in (
         "split_pdf",
@@ -344,19 +603,26 @@ async def handle_pdf_document(
     if not document:
         return
 
-    filename = document.file_name or ""
+    filename = (
+        document.file_name
+        or ""
+    )
 
-    if not filename.lower().endswith(".pdf"):
+    if not filename.lower().endswith(
+        ".pdf"
+    ):
+
         await update.message.reply_text(
             "❌ দয়া করে একটি PDF file পাঠাও।"
         )
         return
 
-    # -------------------------
-    # Merge PDF
-    # -------------------------
+    # -----------------------------------------------------
+    # MERGE PDF
+    # -----------------------------------------------------
 
     if action == "merge_pdf":
+
         folder = context.user_data.get(
             "merge_pdf_folder"
         )
@@ -364,20 +630,26 @@ async def handle_pdf_document(
         if not folder:
             return
 
-        number = len(
-            context.user_data.get(
-                "merge_pdf_paths",
-                []
+        number = (
+            len(
+                context.user_data.get(
+                    "merge_pdf_paths",
+                    [],
+                )
             )
-        ) + 1
+            + 1
+        )
 
         file_path = os.path.join(
             folder,
-            f"pdf_{number}.pdf"
+            f"pdf_{number}.pdf",
         )
 
         try:
-            telegram_file = await document.get_file()
+
+            telegram_file = (
+                await document.get_file()
+            )
 
             await telegram_file.download_to_drive(
                 file_path
@@ -385,7 +657,9 @@ async def handle_pdf_document(
 
             context.user_data[
                 "merge_pdf_paths"
-            ].append(file_path)
+            ].append(
+                file_path
+            )
 
             count = len(
                 context.user_data[
@@ -400,63 +674,88 @@ async def handle_pdf_document(
             )
 
         except Exception as error:
+
             await update.message.reply_text(
-                f"❌ PDF save করা যায়নি:\n{error}"
+                "❌ PDF save করা যায়নি:\n"
+                f"{error}"
             )
 
         return
 
-    # -------------------------
-    # Other PDF operations
-    # -------------------------
+    # -----------------------------------------------------
+    # OTHER PDF OPERATIONS
+    # -----------------------------------------------------
 
     folder = create_temp_dir()
 
     input_path = os.path.join(
         folder,
-        "input.pdf"
+        "input.pdf",
     )
 
     try:
-        telegram_file = await document.get_file()
+
+        telegram_file = (
+            await document.get_file()
+        )
 
         await telegram_file.download_to_drive(
             input_path
         )
 
-        # Split
+        # -------------------------------------------------
+        # SPLIT
+        # -------------------------------------------------
+
         if action == "split_pdf":
+
             output_dir = os.path.join(
                 folder,
-                "pages"
+                "pages",
             )
 
             files = split_pdf(
                 input_path,
-                output_dir
+                output_dir,
             )
 
             await update.message.reply_text(
-                f"✅ PDF split হয়েছে!\n"
+                "✅ PDF split হয়েছে!\n"
                 f"মোট {len(files)}টি page পাওয়া গেছে।"
             )
 
             for file_path in files:
-                with open(file_path, "rb") as pdf:
+
+                with open(
+                    file_path,
+                    "rb",
+                ) as pdf:
+
                     await update.message.reply_document(
                         document=pdf,
-                        filename=os.path.basename(file_path)
+                        filename=os.path.basename(
+                            file_path
+                        ),
                     )
 
-        # PDF → Text
+        # -------------------------------------------------
+        # PDF → TEXT
+        # -------------------------------------------------
+
         elif action == "pdf_to_text":
-            text = pdf_to_text(input_path)
+
+            text = pdf_to_text(
+                input_path
+            )
 
             if not text.strip():
+
                 await update.message.reply_text(
                     "⚠️ এই PDF থেকে text পাওয়া যায়নি।"
                 )
+
             else:
+
                 await update.message.reply_text(
                     "✅ PDF থেকে text বের করা হয়েছে:"
                 )
@@ -466,14 +765,21 @@ async def handle_pdf_document(
                 for i in range(
                     0,
                     len(text),
-                    chunk_size
+                    chunk_size,
                 ):
+
                     await update.message.reply_text(
-                        text[i:i + chunk_size]
+                        text[
+                            i:i + chunk_size
+                        ]
                     )
 
-        # Protect PDF
+        # -------------------------------------------------
+        # PROTECT PDF
+        # -------------------------------------------------
+
         elif action == "protect_pdf":
+
             context.user_data[
                 "protect_pdf_path"
             ] = input_path
@@ -489,24 +795,34 @@ async def handle_pdf_document(
             return
 
     except Exception as error:
+
         await update.message.reply_text(
-            f"❌ PDF process করা যায়নি:\n{error}"
+            "❌ PDF process করা যায়নি:\n"
+            f"{error}"
         )
 
     finally:
+
         if action != "protect_pdf":
-            cleanup_temp_folder(folder)
+
+            cleanup_temp_folder(
+                folder
+            )
+
             context.user_data.clear()
 
 
-# =========================
+# =========================================================
 # PASSWORD HANDLER
-# =========================
+# =========================================================
 
 async def handle_protect_password(
     update: Update,
-    context: ContextTypes.DEFAULT_TYPE
+    context: ContextTypes.DEFAULT_TYPE,
 ):
+    if not update.message:
+        return
+
     input_path = context.user_data.get(
         "protect_pdf_path"
     )
@@ -518,38 +834,55 @@ async def handle_protect_password(
     if not input_path or not folder:
         return
 
-    password = update.message.text.strip()
+    password = (
+        update.message.text.strip()
+    )
 
     if len(password) < 4:
+
         await update.message.reply_text(
-            "⚠️ Password কমপক্ষে ৪টি character দাও।"
+            "⚠️ Password কমপক্ষে "
+            "৪টি character দাও।"
         )
         return
 
     output_path = os.path.join(
         folder,
-        "protected.pdf"
+        "protected.pdf",
     )
 
     try:
+
         protect_pdf(
             input_path,
             output_path,
-            password
+            password,
         )
 
-        with open(output_path, "rb") as pdf:
+        with open(
+            output_path,
+            "rb",
+        ) as pdf:
+
             await update.message.reply_document(
                 document=pdf,
                 filename="protected.pdf",
-                caption="✅ PDF password protected হয়েছে!"
+                caption=(
+                    "✅ PDF password protected হয়েছে!"
+                ),
             )
 
     except Exception as error:
+
         await update.message.reply_text(
-            f"❌ PDF protect করা যায়নি:\n{error}"
+            "❌ PDF protect করা যায়নি:\n"
+            f"{error}"
         )
 
     finally:
-        cleanup_temp_folder(folder)
+
+        cleanup_temp_folder(
+            folder
+        )
+
         context.user_data.clear()
