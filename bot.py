@@ -19,7 +19,6 @@ from config import (
     ADMIN_ID,
     DEVELOPER_NAME,
     DEVELOPER_USERNAME,
-    DEVELOPER_CHANNEL,
 )
 
 from utils.keyboards import (
@@ -72,14 +71,35 @@ from handlers.qr import (
     handle_qr_image,
 )
 
+from handlers.audio import (
+    start_text_to_voice,
+    start_voice_changer,
+    start_audio_cutter,
+    start_audio_converter,
+    start_volume_changer,
+    start_audio_info,
+    handle_audio_text,
+    handle_audio_file,
+    handle_audio_format,
+)
+
 
 logging.basicConfig(
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    format=(
+        "%(asctime)s - "
+        "%(name)s - "
+        "%(levelname)s - "
+        "%(message)s"
+    ),
     level=logging.INFO,
 )
 
 logger = logging.getLogger(__name__)
 
+
+# =========================================================
+# START
+# =========================================================
 
 async def start(
     update: Update,
@@ -93,6 +113,10 @@ async def start(
         reply_markup=main_menu(),
     )
 
+
+# =========================================================
+# ADMIN
+# =========================================================
 
 async def admin(
     update: Update,
@@ -114,6 +138,10 @@ async def admin(
     )
 
 
+# =========================================================
+# BUTTON HANDLER
+# =========================================================
+
 async def button_handler(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE,
@@ -127,9 +155,9 @@ async def button_handler(
 
     data = query.data
 
-    # =========================
+    # =====================================================
     # HOME
-    # =========================
+    # =====================================================
 
     if data == "home":
         context.user_data.clear()
@@ -141,9 +169,9 @@ async def button_handler(
         )
         return
 
-    # =========================
+    # =====================================================
     # PDF MENU
-    # =========================
+    # =====================================================
 
     if data == "pdf_menu":
         await query.edit_message_text(
@@ -153,9 +181,9 @@ async def button_handler(
         )
         return
 
-    # =========================
+    # =====================================================
     # IMAGE MENU
-    # =========================
+    # =====================================================
 
     if data == "image_menu":
         await query.edit_message_text(
@@ -165,9 +193,9 @@ async def button_handler(
         )
         return
 
-    # =========================
+    # =====================================================
     # QR MENU
-    # =========================
+    # =====================================================
 
     if data == "qr_menu":
         await query.edit_message_text(
@@ -177,9 +205,9 @@ async def button_handler(
         )
         return
 
-    # =========================
+    # =====================================================
     # AUDIO MENU
-    # =========================
+    # =====================================================
 
     if data == "audio_menu":
         await query.edit_message_text(
@@ -189,9 +217,9 @@ async def button_handler(
         )
         return
 
-    # =========================
+    # =====================================================
     # FILE MENU
-    # =========================
+    # =====================================================
 
     if data == "file_menu":
         await query.edit_message_text(
@@ -201,9 +229,9 @@ async def button_handler(
         )
         return
 
-    # =========================
+    # =====================================================
     # PDF FEATURES
-    # =========================
+    # =====================================================
 
     if data == "text_to_pdf":
         await start_text_to_pdf(
@@ -247,9 +275,9 @@ async def button_handler(
         )
         return
 
-    # =========================
+    # =====================================================
     # IMAGE FEATURES
-    # =========================
+    # =====================================================
 
     if data == "resize_image":
         await start_resize_image(
@@ -279,9 +307,9 @@ async def button_handler(
         )
         return
 
-    # =========================
+    # =====================================================
     # IMAGE CONVERSION
-    # =========================
+    # =====================================================
 
     if data == "convert_jpg":
         await handle_convert_format(
@@ -315,9 +343,9 @@ async def button_handler(
         )
         return
 
-    # =========================
+    # =====================================================
     # QR FEATURES
-    # =========================
+    # =====================================================
 
     if data == "qr_text":
         await start_qr_text(
@@ -368,10 +396,6 @@ async def button_handler(
         )
         return
 
-    # =========================
-    # QR SCANNER
-    # =========================
-
     if data == "qr_scan":
         await start_qr_scan(
             update,
@@ -379,40 +403,110 @@ async def button_handler(
         )
         return
 
-    # =========================
+    # =====================================================
+    # AUDIO FEATURES
+    # =====================================================
+
+    if data == "text_to_voice":
+        await start_text_to_voice(
+            update,
+            context,
+        )
+        return
+
+    if data == "voice_changer":
+        await start_voice_changer(
+            update,
+            context,
+        )
+        return
+
+    if data == "audio_cutter":
+        await start_audio_cutter(
+            update,
+            context,
+        )
+        return
+
+    if data == "audio_converter":
+        await start_audio_converter(
+            update,
+            context,
+        )
+        return
+
+    if data == "volume_changer":
+        await start_volume_changer(
+            update,
+            context,
+        )
+        return
+
+    if data == "audio_info":
+        await start_audio_info(
+            update,
+            context,
+        )
+        return
+
+    # =====================================================
+    # AUDIO FORMAT
+    # =====================================================
+
+    if data == "audio_mp3":
+        await handle_audio_format(
+            update,
+            context,
+            "mp3",
+        )
+        return
+
+    if data == "audio_wav":
+        await handle_audio_format(
+            update,
+            context,
+            "wav",
+        )
+        return
+
+    if data == "audio_ogg":
+        await handle_audio_format(
+            update,
+            context,
+            "ogg",
+        )
+        return
+
+    if data == "audio_flac":
+        await handle_audio_format(
+            update,
+            context,
+            "flac",
+        )
+        return
+
+    # =====================================================
     # DEVELOPER
-    # =========================
+    # =====================================================
 
     if data == "developer":
         text = (
             "👨‍💻 Developer\n\n"
             f"Name: {DEVELOPER_NAME}\n"
+            f"Telegram: {DEVELOPER_USERNAME}"
         )
-
-        if DEVELOPER_USERNAME:
-            text += (
-                f"Telegram: "
-                f"{DEVELOPER_USERNAME}\n"
-            )
-
-        if DEVELOPER_CHANNEL:
-            text += (
-                f"Channel: "
-                f"{DEVELOPER_CHANNEL}\n"
-            )
 
         await query.edit_message_text(
             text,
             reply_markup=developer_menu(
                 DEVELOPER_USERNAME,
-                DEVELOPER_CHANNEL,
             ),
         )
         return
 
-    # =========================
+    # =====================================================
     # HELP
-    # =========================
+    # =====================================================
 
     if data == "help":
         help_keyboard = InlineKeyboardMarkup([
@@ -455,12 +549,16 @@ async def button_handler(
             "🎙️ Audio Tools\n"
             "• Text → Voice\n"
             "• Voice Changer\n"
-            "• Audio Converter\n\n"
+            "• Audio Cutter\n"
+            "• Audio Converter\n"
+            "• Volume Changer\n"
+            "• Audio Info\n\n"
 
             "🛠️ File Tools\n"
             "• ZIP\n"
             "• Extract ZIP\n"
-            "• File Converter\n\n"
+            "• File Converter\n"
+            "• File Info\n\n"
 
             "⚠️ কিছু feature এখনো development-এ আছে।",
 
@@ -468,9 +566,9 @@ async def button_handler(
         )
         return
 
-    # =========================
+    # =====================================================
     # ADMIN FEATURES
-    # =========================
+    # =====================================================
 
     admin_features = {
         "admin_stats": "📊 Statistics",
@@ -499,18 +597,12 @@ async def button_handler(
         )
         return
 
-    # =========================
+    # =====================================================
     # FUTURE FEATURES
-    # =========================
+    # =====================================================
 
     future_features = {
         "pdf_to_image": "🖼️ PDF → Image",
-        "text_to_voice": "🗣️ Text → Voice",
-        "voice_changer": "🎭 Voice Changer",
-        "audio_cutter": "✂️ Audio Cutter",
-        "audio_converter": "🔄 Audio Converter",
-        "volume_changer": "🔊 Volume Changer",
-        "audio_info": "ℹ️ Audio Info",
         "create_zip": "🗜️ Create ZIP",
         "extract_zip": "📦 Extract ZIP",
         "file_converter": "🔄 File Converter",
@@ -537,9 +629,9 @@ async def button_handler(
         return
 
 
-# =========================
+# =========================================================
 # TEXT HANDLER
-# =========================
+# =========================================================
 
 async def text_handler(
     update: Update,
@@ -581,7 +673,18 @@ async def text_handler(
         )
         return
 
-    # QR Text Features
+    # Audio text inputs
+    if context.user_data.get(
+        "audio_action"
+    ):
+
+        await handle_audio_text(
+            update,
+            context,
+        )
+        return
+
+    # QR text inputs
     if context.user_data.get(
         "qr_action"
     ):
@@ -593,9 +696,9 @@ async def text_handler(
         return
 
 
-# =========================
+# =========================================================
 # PHOTO HANDLER
-# =========================
+# =========================================================
 
 async def photo_handler(
     update: Update,
@@ -641,9 +744,9 @@ async def photo_handler(
         return
 
 
-# =========================
+# =========================================================
 # DOCUMENT HANDLER
-# =========================
+# =========================================================
 
 async def document_handler(
     update: Update,
@@ -652,15 +755,27 @@ async def document_handler(
     if not update.message:
         return
 
+    # Audio files
+    if context.user_data.get(
+        "audio_action"
+    ):
+
+        await handle_audio_file(
+            update,
+            context,
+        )
+        return
+
+    # PDF files
     await handle_pdf_document(
         update,
         context,
     )
 
 
-# =========================
+# =========================================================
 # DONE COMMAND
-# =========================
+# =========================================================
 
 async def done_command(
     update: Update,
@@ -686,9 +801,9 @@ async def done_command(
     )
 
 
-# =========================
+# =========================================================
 # CANCEL COMMAND
-# =========================
+# =========================================================
 
 async def cancel_command(
     update: Update,
@@ -702,9 +817,9 @@ async def cancel_command(
     )
 
 
-# =========================
+# =========================================================
 # ERROR HANDLER
-# =========================
+# =========================================================
 
 async def error_handler(
     update: object,
@@ -716,9 +831,9 @@ async def error_handler(
     )
 
 
-# =========================
+# =========================================================
 # MAIN
-# =========================
+# =========================================================
 
 def main():
     if not BOT_TOKEN:
@@ -793,7 +908,7 @@ def main():
         )
     )
 
-    # Errors
+    # Error handler
     application.add_error_handler(
         error_handler
     )
