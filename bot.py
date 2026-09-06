@@ -1,7 +1,10 @@
-import os
 import logging
 
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
+from telegram import (
+    InlineKeyboardButton,
+    InlineKeyboardMarkup,
+    Update,
+)
 from telegram.ext import (
     Application,
     CallbackQueryHandler,
@@ -41,8 +44,13 @@ from handlers.pdf import (
     handle_pdf_document,
     handle_protect_password,
     done_pdf,
+    handle_image,
 )
 
+
+# =========================================================
+# LOGGING
+# =========================================================
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -52,143 +60,204 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-# =========================
-# START
-# =========================
+# =========================================================
+# START COMMAND
+# =========================================================
 
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def start(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE
+):
     context.user_data.clear()
 
     await update.message.reply_text(
         "🤖 Welcome to All-in-One Bot!\n\n"
-        "নিচের menu থেকে একটি feature নির্বাচন করো:",
+        "একটি feature নির্বাচন করো:",
         reply_markup=main_menu(),
     )
 
 
-# =========================
-# ADMIN
-# =========================
+# =========================================================
+# ADMIN COMMAND
+# =========================================================
 
-async def admin(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def admin(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE
+):
+    if not update.effective_user:
+        return
+
     if update.effective_user.id != ADMIN_ID:
         await update.message.reply_text(
-            "❌ এই command শুধু admin-এর জন্য।"
+            "❌ এই panel শুধু Admin-এর জন্য।"
         )
         return
 
     await update.message.reply_text(
-        "👑 Admin Panel",
+        "👑 Admin Panel\n\n"
+        "নিচের option থেকে নির্বাচন করো:",
         reply_markup=admin_menu(),
     )
 
 
-# =========================
-# CALLBACK HANDLER
-# =========================
+# =========================================================
+# BUTTON HANDLER
+# =========================================================
 
 async def button_handler(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE
 ):
     query = update.callback_query
+
+    if not query:
+        return
+
     await query.answer()
 
     data = query.data
 
-    # -------------------------
-    # Main menu
-    # -------------------------
+    # =====================================================
+    # HOME
+    # =====================================================
 
     if data == "home":
+        context.user_data.clear()
+
         await query.edit_message_text(
-            "🏠 Main Menu\n\nএকটি category নির্বাচন করো:",
+            "🏠 Main Menu\n\n"
+            "একটি category নির্বাচন করো:",
             reply_markup=main_menu(),
         )
         return
 
-    # -------------------------
-    # Category menus
-    # -------------------------
+    # =====================================================
+    # PDF MENU
+    # =====================================================
 
     if data == "pdf_menu":
         await query.edit_message_text(
-            "📄 PDF Tools",
+            "📄 PDF Tools\n\n"
+            "যে PDF tool দরকার সেটি নির্বাচন করো:",
             reply_markup=pdf_menu(),
         )
         return
 
+    # =====================================================
+    # IMAGE MENU
+    # =====================================================
+
     if data == "image_menu":
         await query.edit_message_text(
-            "🖼️ Image Tools",
+            "🖼️ Image Tools\n\n"
+            "যে image tool দরকার সেটি নির্বাচন করো:",
             reply_markup=image_menu(),
         )
         return
 
+    # =====================================================
+    # QR MENU
+    # =====================================================
+
     if data == "qr_menu":
         await query.edit_message_text(
-            "🔳 QR Tools",
+            "🔳 QR Tools\n\n"
+            "যে QR tool দরকার সেটি নির্বাচন করো:",
             reply_markup=qr_menu(),
         )
         return
 
+    # =====================================================
+    # AUDIO MENU
+    # =====================================================
+
     if data == "audio_menu":
         await query.edit_message_text(
-            "🎙️ Audio Tools",
+            "🎙️ Audio Tools\n\n"
+            "যে audio tool দরকার সেটি নির্বাচন করো:",
             reply_markup=audio_menu(),
         )
         return
 
+    # =====================================================
+    # FILE MENU
+    # =====================================================
+
     if data == "file_menu":
         await query.edit_message_text(
-            "🛠️ File Tools",
+            "🛠️ File Tools\n\n"
+            "যে file tool দরকার সেটি নির্বাচন করো:",
             reply_markup=file_menu(),
         )
         return
 
-    # -------------------------
-    # PDF features
-    # -------------------------
+    # =====================================================
+    # PDF FEATURES
+    # =====================================================
 
     if data == "text_to_pdf":
-        await start_text_to_pdf(update, context)
+        await start_text_to_pdf(
+            update,
+            context
+        )
         return
 
     if data == "image_to_pdf":
-        await start_image_to_pdf(update, context)
+        await start_image_to_pdf(
+            update,
+            context
+        )
         return
 
     if data == "merge_pdf":
-        await start_merge_pdf(update, context)
+        await start_merge_pdf(
+            update,
+            context
+        )
         return
 
     if data == "split_pdf":
-        await start_split_pdf(update, context)
+        await start_split_pdf(
+            update,
+            context
+        )
         return
 
     if data == "pdf_to_text":
-        await start_pdf_to_text(update, context)
+        await start_pdf_to_text(
+            update,
+            context
+        )
         return
 
     if data == "protect_pdf":
-        await start_protect_pdf(update, context)
+        await start_protect_pdf(
+            update,
+            context
+        )
         return
 
-    # -------------------------
-    # Developer
-    # -------------------------
+    # =====================================================
+    # DEVELOPER
+    # =====================================================
 
     if data == "developer":
+
         text = (
             "👨‍💻 Developer\n\n"
             f"Name: {DEVELOPER_NAME}\n"
         )
 
         if DEVELOPER_USERNAME:
-            text += f"Telegram: {DEVELOPER_USERNAME}\n"
+            text += (
+                f"Telegram: {DEVELOPER_USERNAME}\n"
+            )
 
         if DEVELOPER_CHANNEL:
-            text += f"Channel: {DEVELOPER_CHANNEL}\n"
+            text += (
+                f"Channel: {DEVELOPER_CHANNEL}\n"
+            )
 
         await query.edit_message_text(
             text,
@@ -197,35 +266,57 @@ async def button_handler(
                 DEVELOPER_CHANNEL,
             ),
         )
+
         return
 
-    # -------------------------
-    # Help
-    # -------------------------
+    # =====================================================
+    # HELP
+    # =====================================================
 
     if data == "help":
+
+        help_keyboard = InlineKeyboardMarkup([
+            [
+                InlineKeyboardButton(
+                    "🔙 Back",
+                    callback_data="home"
+                )
+            ]
+        ])
+
         await query.edit_message_text(
             "ℹ️ Help\n\n"
-            "1️⃣ একটি category নির্বাচন করো।\n"
-            "2️⃣ যে tool দরকার সেটি নির্বাচন করো।\n"
-            "3️⃣ Bot যা চাইবে সেই file/text পাঠাও।\n\n"
-            "⚠️ বড় file process করতে বেশি সময় লাগতে পারে।",
-            reply_markup=InlineKeyboardMarkup([
-                [
-                    InlineKeyboardButton(
-                        "🔙 Back",
-                        callback_data="home"
-                    )
-                ]
-            ]),
+            "🤖 এই bot দিয়ে বিভিন্ন ধরনের file "
+            "processing করা যাবে।\n\n"
+            "📄 PDF Tools\n"
+            "• Text → PDF\n"
+            "• Image → PDF\n"
+            "• Merge PDF\n"
+            "• Split PDF\n"
+            "• PDF → Text\n"
+            "• Protect PDF\n\n"
+            "🖼️ Image Tools\n"
+            "• Resize\n"
+            "• Compress\n"
+            "• Convert\n\n"
+            "🔳 QR Tools\n"
+            "• QR Generator\n"
+            "• QR Scanner\n\n"
+            "🎙️ Audio Tools\n"
+            "• Text → Voice\n"
+            "• Voice Changer\n"
+            "• Audio Converter\n\n"
+            "⚠️ কিছু feature এখনো development-এ আছে।",
+            reply_markup=help_keyboard,
         )
+
         return
 
-    # -------------------------
-    # Admin buttons
-    # -------------------------
+    # =====================================================
+    # ADMIN FEATURES
+    # =====================================================
 
-    admin_callbacks = {
+    admin_features = {
         "admin_stats": "📊 Statistics",
         "admin_users": "👥 Users",
         "admin_broadcast": "📢 Broadcast",
@@ -234,7 +325,11 @@ async def button_handler(
         "admin_maintenance": "🔧 Maintenance",
     }
 
-    if data in admin_callbacks:
+    if data in admin_features:
+
+        if not update.effective_user:
+            return
+
         if update.effective_user.id != ADMIN_ID:
             await query.edit_message_text(
                 "❌ Unauthorized."
@@ -242,22 +337,27 @@ async def button_handler(
             return
 
         await query.edit_message_text(
-            f"{admin_callbacks[data]}\n\n"
-            "এই admin feature পরবর্তী ধাপে connect করা হবে।",
+            f"{admin_features[data]}\n\n"
+            "🔨 এই admin feature পরবর্তী ধাপে "
+            "database-এর সাথে connect করা হবে।",
             reply_markup=admin_menu(),
         )
+
         return
 
-    # -------------------------
-    # Future features
-    # -------------------------
+    # =====================================================
+    # FUTURE FEATURES
+    # =====================================================
 
     future_features = {
-        "resize_image": "📐 Resize",
-        "compress_image": "🗜️ Compress",
+
+        # Image
+        "resize_image": "📐 Resize Image",
+        "compress_image": "🗜️ Compress Image",
         "convert_image": "🔄 Convert Image",
         "image_info": "ℹ️ Image Info",
 
+        # QR
         "qr_text": "📝 Text → QR",
         "qr_url": "🌐 URL → QR",
         "qr_wifi": "📶 Wi-Fi → QR",
@@ -267,6 +367,7 @@ async def button_handler(
         "qr_scan": "🔍 Scan QR",
         "qr_to_pdf": "📄 QR → PDF",
 
+        # Audio
         "text_to_voice": "🗣️ Text → Voice",
         "voice_changer": "🎭 Voice Changer",
         "audio_cutter": "✂️ Audio Cutter",
@@ -274,6 +375,7 @@ async def button_handler(
         "volume_changer": "🔊 Volume Changer",
         "audio_info": "ℹ️ Audio Info",
 
+        # Files
         "create_zip": "🗜️ Create ZIP",
         "extract_zip": "📦 Extract ZIP",
         "file_converter": "🔄 File Converter",
@@ -281,66 +383,130 @@ async def button_handler(
     }
 
     if data in future_features:
+
+        back_keyboard = InlineKeyboardMarkup([
+            [
+                InlineKeyboardButton(
+                    "🔙 Back",
+                    callback_data="home"
+                )
+            ]
+        ])
+
         await query.edit_message_text(
             f"{future_features[data]}\n\n"
             "🔨 এই feature-এর processing module "
-            "পরবর্তী ধাপে যুক্ত করা হবে।",
-            reply_markup=InlineKeyboardMarkup([
-                [
-                    InlineKeyboardButton(
-                        "🔙 Back",
-                        callback_data="home"
-                    )
-                ]
-            ]),
+            "এখনো connect করা হয়নি।\n\n"
+            "পরবর্তী ধাপে এটি তৈরি করা হবে।",
+            reply_markup=back_keyboard,
         )
+
         return
 
 
-# =========================
-# TEXT HANDLER
-# =========================
+# =========================================================
+# TEXT MESSAGE HANDLER
+# =========================================================
 
 async def text_handler(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE
 ):
-    action = context.user_data.get("pdf_action")
-
-    if action == "text_to_pdf":
-        await handle_pdf_text(update, context)
+    if not update.message:
         return
 
+    # Text → PDF
+    if context.user_data.get("pdf_action") == "text_to_pdf":
+
+        await handle_pdf_text(
+            update,
+            context
+        )
+
+        return
+
+    # Protect PDF password
     if context.user_data.get("protect_pdf_path"):
-        await handle_protect_password(update, context)
+
+        await handle_protect_password(
+            update,
+            context
+        )
+
         return
 
 
-# =========================
+# =========================================================
+# PHOTO HANDLER
+# =========================================================
+
+async def photo_handler(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE
+):
+    if not update.message:
+        return
+
+    if context.user_data.get("pdf_action") == "image_to_pdf":
+
+        await handle_image(
+            update,
+            context
+        )
+
+        return
+
+
+# =========================================================
 # DOCUMENT HANDLER
-# =========================
+# =========================================================
 
 async def document_handler(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE
 ):
-    await handle_pdf_document(update, context)
+    if not update.message:
+        return
+
+    await handle_pdf_document(
+        update,
+        context
+    )
 
 
-# =========================
+# =========================================================
 # DONE COMMAND
-# =========================
+# =========================================================
 
 async def done_command(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE
 ):
-    await done_pdf(update, context)
+    await done_pdf(
+        update,
+        context
+    )
 
 
-# =========================
+# =========================================================
+# CANCEL COMMAND
+# =========================================================
+
+async def cancel_command(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE
+):
+    context.user_data.clear()
+
+    await update.message.reply_text(
+        "❌ Current task cancel করা হয়েছে।",
+        reply_markup=main_menu(),
+    )
+
+
+# =========================================================
 # ERROR HANDLER
-# =========================
+# =========================================================
 
 async def error_handler(
     update: object,
@@ -352,14 +518,15 @@ async def error_handler(
     )
 
 
-# =========================
+# =========================================================
 # MAIN
-# =========================
+# =========================================================
 
 def main():
+
     if not BOT_TOKEN:
         raise RuntimeError(
-            "BOT_TOKEN environment variable is missing."
+            "BOT_TOKEN environment variable পাওয়া যায়নি।"
         )
 
     application = (
@@ -368,48 +535,105 @@ def main():
         .build()
     )
 
+    # -----------------------------------------------------
     # Commands
-    application.add_handler(
-        CommandHandler("start", start)
-    )
+    # -----------------------------------------------------
 
     application.add_handler(
-        CommandHandler("admin", admin)
-    )
-
-    application.add_handler(
-        CommandHandler("done", done_command)
-    )
-
-    # Buttons
-    application.add_handler(
-        CallbackQueryHandler(button_handler)
-    )
-
-    # Text messages
-    application.add_handler(
-        MessageHandler(
-            filters.TEXT & ~filters.COMMAND,
-            text_handler,
+        CommandHandler(
+            "start",
+            start
         )
     )
 
+    application.add_handler(
+        CommandHandler(
+            "admin",
+            admin
+        )
+    )
+
+    application.add_handler(
+        CommandHandler(
+            "done",
+            done_command
+        )
+    )
+
+    application.add_handler(
+        CommandHandler(
+            "cancel",
+            cancel_command
+        )
+    )
+
+    # -----------------------------------------------------
+    # Buttons
+    # -----------------------------------------------------
+
+    application.add_handler(
+        CallbackQueryHandler(
+            button_handler
+        )
+    )
+
+    # -----------------------------------------------------
+    # Photos
+    # -----------------------------------------------------
+
+    application.add_handler(
+        MessageHandler(
+            filters.PHOTO,
+            photo_handler
+        )
+    )
+
+    # -----------------------------------------------------
     # Documents
+    # -----------------------------------------------------
+
     application.add_handler(
         MessageHandler(
             filters.Document.ALL,
-            document_handler,
+            document_handler
         )
     )
 
-    application.add_error_handler(error_handler)
+    # -----------------------------------------------------
+    # Text
+    # -----------------------------------------------------
 
-    logger.info("Bot started.")
+    application.add_handler(
+        MessageHandler(
+            filters.TEXT & ~filters.COMMAND,
+            text_handler
+        )
+    )
+
+    # -----------------------------------------------------
+    # Errors
+    # -----------------------------------------------------
+
+    application.add_error_handler(
+        error_handler
+    )
+
+    logger.info(
+        "🚀 Telegram bot started successfully."
+    )
+
+    # -----------------------------------------------------
+    # Start polling
+    # -----------------------------------------------------
 
     application.run_polling(
         allowed_updates=Update.ALL_TYPES
     )
 
+
+# =========================================================
+# RUN
+# =========================================================
 
 if __name__ == "__main__":
     main()
