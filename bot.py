@@ -1,4 +1,9 @@
 import logging
+import os
+import threading
+
+import uvicorn
+from fastapi import FastAPI
 
 from telegram import Update
 from telegram.ext import (
@@ -94,8 +99,17 @@ from handlers.file import (
 )
 
 
+# ==========================================
+# LOGGING
+# ==========================================
+
 logging.basicConfig(
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    format=(
+        "%(asctime)s - "
+        "%(name)s - "
+        "%(levelname)s - "
+        "%(message)s"
+    ),
     level=logging.INFO,
 )
 
@@ -103,23 +117,72 @@ logger = logging.getLogger(__name__)
 
 
 # ==========================================
-# START
+# RENDER WEB SERVER
 # ==========================================
 
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+web_app = FastAPI()
+
+
+@web_app.get("/")
+async def home():
+    return {
+        "status": "online",
+        "service": "Telegram Bot",
+    }
+
+
+@web_app.get("/health")
+async def health():
+    return {
+        "status": "healthy",
+    }
+
+
+def start_web_server():
+    port = int(
+        os.environ.get(
+            "PORT",
+            "10000",
+        )
+    )
+
+    logger.info(
+        "Starting web server on port %s",
+        port,
+    )
+
+    uvicorn.run(
+        web_app,
+        host="0.0.0.0",
+        port=port,
+        log_level="warning",
+    )
+
+
+# ==========================================
+# START COMMAND
+# ==========================================
+
+async def start(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+):
     context.user_data.clear()
 
     await update.message.reply_text(
-        f"🤖 <b>{DEVELOPER_NAME} All-in-One Bot</b>\n\n"
-        "এক জায়গায় PDF, Image, QR, Audio এবং File Tools।\n\n"
-        "নিচের menu থেকে একটি option বেছে নাও।",
+        f"🤖 <b>{DEVELOPER_NAME} "
+        "All-in-One Bot</b>\n\n"
+        "এক জায়গায় PDF, Image, QR, "
+        "Audio এবং File Tools।\n\n"
+        "নিচের menu থেকে একটি option "
+        "বেছে নাও।",
         reply_markup=main_menu(),
         parse_mode="HTML",
     )
 
 
 # ==========================================
-# MENU CALLBACKS
+# MAIN MENU CALLBACK
 # ==========================================
 
 async def menu_callback(
@@ -131,7 +194,9 @@ async def menu_callback(
 
     if data == "home":
         context.user_data.clear()
+
         await query.answer()
+
         await query.edit_message_text(
             "🏠 <b>Main Menu</b>\n\n"
             "একটি tool select করো।",
@@ -142,7 +207,9 @@ async def menu_callback(
 
     if data == "pdf_menu":
         context.user_data.clear()
+
         await query.answer()
+
         await query.edit_message_text(
             "📄 <b>PDF Tools</b>\n\n"
             "একটি PDF tool select করো।",
@@ -153,7 +220,9 @@ async def menu_callback(
 
     if data == "image_menu":
         context.user_data.clear()
+
         await query.answer()
+
         await query.edit_message_text(
             "🖼️ <b>Image Tools</b>\n\n"
             "একটি image tool select করো।",
@@ -164,7 +233,9 @@ async def menu_callback(
 
     if data == "qr_menu":
         context.user_data.clear()
+
         await query.answer()
+
         await query.edit_message_text(
             "🔳 <b>QR Tools</b>\n\n"
             "একটি QR tool select করো।",
@@ -175,7 +246,9 @@ async def menu_callback(
 
     if data == "audio_menu":
         context.user_data.clear()
+
         await query.answer()
+
         await query.edit_message_text(
             "🎙️ <b>Audio Tools</b>\n\n"
             "একটি audio tool select করো।",
@@ -186,7 +259,9 @@ async def menu_callback(
 
     if data == "file_menu":
         context.user_data.clear()
+
         await query.answer()
+
         await query.edit_message_text(
             "🛠️ <b>File Tools</b>\n\n"
             "একটি file tool select করো।",
@@ -197,11 +272,14 @@ async def menu_callback(
 
     if data == "developer":
         context.user_data.clear()
+
         await query.answer()
+
         await query.edit_message_text(
             "👨‍💻 <b>Developer</b>\n\n"
             f"Name: <b>{DEVELOPER_NAME}</b>\n"
-            f"Telegram: <b>{DEVELOPER_USERNAME}</b>",
+            f"Telegram: "
+            f"<b>{DEVELOPER_USERNAME}</b>",
             reply_markup=developer_menu(
                 DEVELOPER_USERNAME
             ),
@@ -211,16 +289,18 @@ async def menu_callback(
 
     if data == "help":
         context.user_data.clear()
+
         await query.answer()
+
         await query.edit_message_text(
             "ℹ️ <b>Help</b>\n\n"
             "📄 PDF Tools — PDF তৈরি ও edit\n"
-            "🖼️ Image Tools — resize, compress, convert\n"
+            "🖼️ Image Tools — resize, "
+            "compress, convert\n"
             "🔳 QR Tools — QR generate ও scan\n"
-            "🎙️ Audio Tools — voice ও audio processing\n"
-            "🛠️ File Tools — ZIP ও file information\n\n"
-            "কোনো কাজ শেষ করার জন্য bot যেটা চাইবে "
-            "সেটাই পাঠাও।",
+            "🎙️ Audio Tools — voice ও audio\n"
+            "🛠️ File Tools — ZIP ও file info\n\n"
+            "কাজ শুরু করতে একটি tool select করো।",
             reply_markup=help_menu(),
             parse_mode="HTML",
         )
@@ -228,7 +308,7 @@ async def menu_callback(
 
 
 # ==========================================
-# PDF CALLBACKS
+# PDF CALLBACK
 # ==========================================
 
 async def pdf_callback(
@@ -251,11 +331,14 @@ async def pdf_callback(
     handler = handlers.get(data)
 
     if handler:
-        await handler(update, context)
+        await handler(
+            update,
+            context,
+        )
 
 
 # ==========================================
-# IMAGE CALLBACKS
+# IMAGE CALLBACK
 # ==========================================
 
 async def image_callback(
@@ -276,7 +359,10 @@ async def image_callback(
     handler = handlers.get(data)
 
     if handler:
-        await handler(update, context)
+        await handler(
+            update,
+            context,
+        )
 
 
 async def image_format_callback(
@@ -292,7 +378,9 @@ async def image_format_callback(
         "convert_bmp": "bmp",
     }
 
-    output_format = formats.get(query.data)
+    output_format = formats.get(
+        query.data
+    )
 
     if output_format:
         await handle_convert_format(
@@ -303,7 +391,7 @@ async def image_format_callback(
 
 
 # ==========================================
-# QR CALLBACKS
+# QR CALLBACK
 # ==========================================
 
 async def qr_callback(
@@ -327,11 +415,14 @@ async def qr_callback(
     handler = handlers.get(data)
 
     if handler:
-        await handler(update, context)
+        await handler(
+            update,
+            context,
+        )
 
 
 # ==========================================
-# AUDIO CALLBACKS
+# AUDIO CALLBACK
 # ==========================================
 
 async def audio_callback(
@@ -353,7 +444,10 @@ async def audio_callback(
     handler = handlers.get(data)
 
     if handler:
-        await handler(update, context)
+        await handler(
+            update,
+            context,
+        )
 
 
 async def audio_format_callback(
@@ -370,7 +464,9 @@ async def audio_format_callback(
         "audio_flac": "flac",
     }
 
-    output_format = formats.get(query.data)
+    output_format = formats.get(
+        query.data
+    )
 
     if output_format:
         await handle_audio_format(
@@ -381,7 +477,7 @@ async def audio_format_callback(
 
 
 # ==========================================
-# FILE CALLBACKS
+# FILE CALLBACK
 # ==========================================
 
 async def file_callback(
@@ -401,7 +497,10 @@ async def file_callback(
     handler = handlers.get(data)
 
     if handler:
-        await handler(update, context)
+        await handler(
+            update,
+            context,
+        )
 
 
 # ==========================================
@@ -412,6 +511,9 @@ async def admin_command(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE,
 ):
+    if not update.effective_user:
+        return
+
     if update.effective_user.id != ADMIN_ID:
         await update.message.reply_text(
             "⛔ Access denied."
@@ -444,8 +546,8 @@ async def admin_callback(
     await query.answer()
 
     await query.message.reply_text(
-        "ℹ️ এই admin feature-এর জন্য "
-        "database/backend এখনো active করা হয়নি।"
+        "ℹ️ এই admin feature এখনো "
+        "database/backend ছাড়া active করা হয়নি।"
     )
 
 
@@ -467,35 +569,45 @@ async def text_handler(
         return
 
     if data.get("pdf_action") == "protect":
-        if data.get("protect_waiting_password"):
+        if data.get(
+            "protect_waiting_password"
+        ):
             await handle_protect_password(
                 update,
                 context,
             )
             return
 
-    if data.get("image_waiting_dimensions"):
+    if data.get(
+        "image_waiting_dimensions"
+    ):
         await handle_image_text(
             update,
             context,
         )
         return
 
-    if data.get("audio_action") == "text_to_voice":
+    if data.get(
+        "audio_action"
+    ) == "text_to_voice":
         await handle_audio_text(
             update,
             context,
         )
         return
 
-    if data.get("audio_waiting_volume"):
+    if data.get(
+        "audio_waiting_volume"
+    ):
         await handle_volume_text(
             update,
             context,
         )
         return
 
-    if data.get("audio_waiting_cut"):
+    if data.get(
+        "audio_waiting_cut"
+    ):
         await handle_cut_text(
             update,
             context,
@@ -535,7 +647,9 @@ async def photo_handler(
         )
         return
 
-    if data.get("pdf_action") == "image_to_pdf":
+    if data.get(
+        "pdf_action"
+    ) == "image_to_pdf":
         await handle_pdf_image_to_pdf(
             update,
             context,
@@ -550,7 +664,8 @@ async def photo_handler(
         return
 
     await update.message.reply_text(
-        "ℹ️ আগে Image Tools থেকে একটি option select করো।"
+        "ℹ️ আগে Image Tools থেকে "
+        "একটি option select করো।"
     )
 
 
@@ -601,7 +716,7 @@ async def document_handler(
 
 
 # ==========================================
-# AUDIO / VOICE
+# AUDIO HANDLER
 # ==========================================
 
 async def audio_handler(
@@ -617,6 +732,10 @@ async def audio_handler(
         )
 
 
+# ==========================================
+# VOICE HANDLER
+# ==========================================
+
 async def voice_handler(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE,
@@ -631,7 +750,7 @@ async def voice_handler(
 
 
 # ==========================================
-# DONE
+# DONE COMMAND
 # ==========================================
 
 async def done_command(
@@ -640,28 +759,36 @@ async def done_command(
 ):
     data = context.user_data
 
-    if data.get("pdf_action") == "image_to_pdf":
+    if data.get(
+        "pdf_action"
+    ) == "image_to_pdf":
         await done_pdf(
             update,
             context,
         )
         return
 
-    if data.get("pdf_action") == "merge":
+    if data.get(
+        "pdf_action"
+    ) == "merge":
         await done_merge_pdf(
             update,
             context,
         )
         return
 
-    if data.get("image_action") == "image_to_pdf":
+    if data.get(
+        "image_action"
+    ) == "image_to_pdf":
         await done_image_to_pdf(
             update,
             context,
         )
         return
 
-    if data.get("file_action") == "create_zip":
+    if data.get(
+        "file_action"
+    ) == "create_zip":
         await done_create_zip(
             update,
             context,
@@ -669,12 +796,13 @@ async def done_command(
         return
 
     await update.message.reply_text(
-        "ℹ️ কোনো active multi-file operation নেই।"
+        "ℹ️ কোনো active multi-file "
+        "operation নেই।"
     )
 
 
 # ==========================================
-# CANCEL
+# CANCEL COMMAND
 # ==========================================
 
 async def cancel_command(
@@ -710,16 +838,33 @@ async def error_handler(
 def main():
     if not BOT_TOKEN:
         raise RuntimeError(
-            "BOT_TOKEN environment variable is missing."
+            "BOT_TOKEN environment variable "
+            "is missing."
         )
 
+    # Start Render HTTP server
+    web_thread = threading.Thread(
+        target=start_web_server,
+        daemon=True,
+    )
+
+    web_thread.start()
+
+    logger.info(
+        "Render web server started."
+    )
+
+    # Create Telegram application
     application = (
         Application.builder()
         .token(BOT_TOKEN)
         .build()
     )
 
+    # --------------------------------------
     # Commands
+    # --------------------------------------
+
     application.add_handler(
         CommandHandler(
             "start",
@@ -748,69 +893,135 @@ def main():
         )
     )
 
-    # Main menus
+    # --------------------------------------
+    # Main Menu
+    # --------------------------------------
+
     application.add_handler(
         CallbackQueryHandler(
             menu_callback,
-            pattern=r"^(home|pdf_menu|image_menu|qr_menu|audio_menu|file_menu|developer|help)$",
+            pattern=(
+                r"^(home|pdf_menu|image_menu|"
+                r"qr_menu|audio_menu|file_menu|"
+                r"developer|help)$"
+            ),
         )
     )
 
+    # --------------------------------------
     # PDF
+    # --------------------------------------
+
     application.add_handler(
         CallbackQueryHandler(
             pdf_callback,
-            pattern=r"^(text_to_pdf|pdf_image_to_pdf|merge_pdf|split_pdf|pdf_to_image|pdf_to_text|protect_pdf)$",
+            pattern=(
+                r"^(text_to_pdf|"
+                r"pdf_image_to_pdf|"
+                r"merge_pdf|"
+                r"split_pdf|"
+                r"pdf_to_image|"
+                r"pdf_to_text|"
+                r"protect_pdf)$"
+            ),
         )
     )
 
+    # --------------------------------------
     # Image
+    # --------------------------------------
+
     application.add_handler(
         CallbackQueryHandler(
             image_callback,
-            pattern=r"^(resize_image|compress_image|convert_image|image_to_pdf|image_info)$",
+            pattern=(
+                r"^(resize_image|"
+                r"compress_image|"
+                r"convert_image|"
+                r"image_to_pdf|"
+                r"image_info)$"
+            ),
         )
     )
 
     application.add_handler(
         CallbackQueryHandler(
             image_format_callback,
-            pattern=r"^convert_(jpg|png|webp|bmp)$",
+            pattern=(
+                r"^convert_"
+                r"(jpg|png|webp|bmp)$"
+            ),
         )
     )
 
+    # --------------------------------------
     # QR
+    # --------------------------------------
+
     application.add_handler(
         CallbackQueryHandler(
             qr_callback,
-            pattern=r"^(qr_text|qr_url|qr_wifi|qr_contact|qr_email|qr_phone|qr_scan|qr_to_pdf)$",
+            pattern=(
+                r"^(qr_text|"
+                r"qr_url|"
+                r"qr_wifi|"
+                r"qr_contact|"
+                r"qr_email|"
+                r"qr_phone|"
+                r"qr_scan|"
+                r"qr_to_pdf)$"
+            ),
         )
     )
 
+    # --------------------------------------
     # Audio
+    # --------------------------------------
+
     application.add_handler(
         CallbackQueryHandler(
             audio_callback,
-            pattern=r"^(text_to_voice|voice_changer|audio_cutter|audio_converter|volume_changer|audio_info)$",
+            pattern=(
+                r"^(text_to_voice|"
+                r"voice_changer|"
+                r"audio_cutter|"
+                r"audio_converter|"
+                r"volume_changer|"
+                r"audio_info)$"
+            ),
         )
     )
 
     application.add_handler(
         CallbackQueryHandler(
             audio_format_callback,
-            pattern=r"^audio_(mp3|wav|ogg|m4a|flac)$",
+            pattern=(
+                r"^audio_"
+                r"(mp3|wav|ogg|m4a|flac)$"
+            ),
         )
     )
 
+    # --------------------------------------
     # File
+    # --------------------------------------
+
     application.add_handler(
         CallbackQueryHandler(
             file_callback,
-            pattern=r"^(create_zip|extract_zip|file_converter|file_info)$",
+            pattern=(
+                r"^(create_zip|"
+                r"extract_zip|"
+                r"file_converter|"
+                r"file_info)$"
+            ),
         )
     )
 
-    # Admin callbacks
+    # --------------------------------------
+    # Admin
+    # --------------------------------------
+
     application.add_handler(
         CallbackQueryHandler(
             admin_callback,
@@ -818,7 +1029,10 @@ def main():
         )
     )
 
+    # --------------------------------------
     # Text
+    # --------------------------------------
+
     application.add_handler(
         MessageHandler(
             filters.TEXT
@@ -827,7 +1041,10 @@ def main():
         )
     )
 
+    # --------------------------------------
     # Photos
+    # --------------------------------------
+
     application.add_handler(
         MessageHandler(
             filters.PHOTO,
@@ -835,7 +1052,10 @@ def main():
         )
     )
 
+    # --------------------------------------
     # Documents
+    # --------------------------------------
+
     application.add_handler(
         MessageHandler(
             filters.Document.ALL,
@@ -843,7 +1063,10 @@ def main():
         )
     )
 
+    # --------------------------------------
     # Audio
+    # --------------------------------------
+
     application.add_handler(
         MessageHandler(
             filters.AUDIO,
@@ -851,7 +1074,10 @@ def main():
         )
     )
 
+    # --------------------------------------
     # Voice
+    # --------------------------------------
+
     application.add_handler(
         MessageHandler(
             filters.VOICE,
@@ -859,18 +1085,30 @@ def main():
         )
     )
 
+    # --------------------------------------
+    # Error Handler
+    # --------------------------------------
+
     application.add_error_handler(
         error_handler
     )
 
     logger.info(
-        "Bot is starting..."
+        "Telegram bot is starting..."
     )
+
+    # --------------------------------------
+    # Start polling
+    # --------------------------------------
 
     application.run_polling(
         allowed_updates=Update.ALL_TYPES
     )
 
+
+# ==========================================
+# ENTRY POINT
+# ==========================================
 
 if __name__ == "__main__":
     main()
