@@ -1033,7 +1033,7 @@ async def setup_menu_button(application):
 
         await application.bot.set_chat_menu_button(
             menu_button=MenuButtonWebApp(
-                text="🚀 Open Bot",
+                text="🚀 On Bot",
                 web_app=WebAppInfo(
                     url="https://cracker-world.onrender.com/"
                 ),
@@ -1041,7 +1041,7 @@ async def setup_menu_button(application):
         )
 
         logger.info(
-            "Telegram menu button configured: 🚀 Open Bot"
+            "Telegram menu button configured: 🚀 On Bot"
         )
 
     except Exception:
