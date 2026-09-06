@@ -1,225 +1,193 @@
 import os
-import re
+import urllib.parse
 
-from telegram import Update
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import ContextTypes
 
 from services.qr_service import (
-    generate_qr,
+    generate_qr_text,
+    generate_qr_url,
     generate_qr_wifi,
     generate_qr_contact,
     generate_qr_email,
     generate_qr_phone,
+    generate_qr,
 )
-
 from services.qr_scanner import scan_qr
-
-from utils.files import (
-    create_temp_dir,
-    cleanup_temp_folder,
-)
+from utils.files import create_temp_dir, cleanup_temp_folder
 
 
-# ============================================================
-# HELPERS
-# ============================================================
+def qr_done_keyboard():
+    return InlineKeyboardMarkup([
+        [
+            InlineKeyboardButton(
+                "🏠 Home",
+                callback_data="home",
+            )
+        ]
+    ])
 
-def get_query_message(update):
-    """Return the callback message safely."""
-    if update.callback_query:
-        return update.callback_query.message
 
-    return update.message
-
-
-def set_qr_action(context, action):
+async def _start_qr(
+    update,
+    context,
+    action,
+    message,
+):
     context.user_data.clear()
     context.user_data["qr_action"] = action
 
+    query = update.callback_query
 
-# ============================================================
-# TEXT → QR
-# ============================================================
-
-async def start_qr_text(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE,
-):
-    set_qr_action(context, "qr_text")
-
-    await get_query_message(update).reply_text(
-        "📝 *Text → QR*\n\n"
-        "যে text-টি QR code বানাতে চাও সেটি পাঠাও।",
-        parse_mode="Markdown",
+    await query.answer()
+    await query.edit_message_text(
+        message,
+        parse_mode="HTML",
     )
 
 
-# ============================================================
-# URL → QR
-# ============================================================
-
-async def start_qr_url(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE,
-):
-    set_qr_action(context, "qr_url")
-
-    await get_query_message(update).reply_text(
-        "🌐 *URL → QR*\n\n"
-        "একটি website URL পাঠাও।\n\n"
-        "উদাহরণ:\n"
-        "https://example.com",
-        parse_mode="Markdown",
+async def start_qr_text(update, context):
+    await _start_qr(
+        update,
+        context,
+        "text",
+        "📝 <b>Text → QR</b>\n\n"
+        "যে text QR করতে চাও সেটা পাঠাও।",
     )
 
 
-# ============================================================
-# WIFI → QR
-# ============================================================
-
-async def start_qr_wifi(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE,
-):
-    set_qr_action(context, "qr_wifi")
-
-    await get_query_message(update).reply_text(
-        "📶 *Wi-Fi → QR*\n\n"
-        "এই format-এ পাঠাও:\n\n"
-        "SSID | PASSWORD | WPA\n\n"
-        "উদাহরণ:\n"
-        "MyWifi | 12345678 | WPA\n\n"
-        "Password না থাকলে:\n"
-        "MyWifi | | nopass",
-        parse_mode="Markdown",
+async def start_qr_url(update, context):
+    await _start_qr(
+        update,
+        context,
+        "url",
+        "🌐 <b>URL → QR</b>\n\n"
+        "একটি URL পাঠাও।",
     )
 
 
-# ============================================================
-# CONTACT → QR
-# ============================================================
-
-async def start_qr_contact(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE,
-):
-    set_qr_action(context, "qr_contact")
-
-    await get_query_message(update).reply_text(
-        "👤 *Contact → QR*\n\n"
-        "এই format-এ পাঠাও:\n\n"
-        "Name | Phone | Email\n\n"
-        "উদাহরণ:\n"
-        "John Doe | +8801712345678 | john@example.com",
-        parse_mode="Markdown",
+async def start_qr_wifi(update, context):
+    await _start_qr(
+        update,
+        context,
+        "wifi",
+        "📶 <b>Wi-Fi → QR</b>\n\n"
+        "এই format-এ পাঠাও:\n"
+        "<code>SSID | PASSWORD</code>\n\n"
+        "Example:\n"
+        "<code>MyWiFi | 12345678</code>",
     )
 
 
-# ============================================================
-# EMAIL → QR
-# ============================================================
-
-async def start_qr_email(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE,
-):
-    set_qr_action(context, "qr_email")
-
-    await get_query_message(update).reply_text(
-        "📧 *Email → QR*\n\n"
-        "এই format-এ পাঠাও:\n\n"
-        "Email | Subject | Message\n\n"
-        "উদাহরণ:\n"
-        "test@example.com | Hello | This is a message.",
-        parse_mode="Markdown",
+async def start_qr_contact(update, context):
+    await _start_qr(
+        update,
+        context,
+        "contact",
+        "👤 <b>Contact → QR</b>\n\n"
+        "এই format-এ পাঠাও:\n"
+        "<code>Name | Phone | Email</code>\n\n"
+        "Email optional।",
     )
 
 
-# ============================================================
-# PHONE → QR
-# ============================================================
-
-async def start_qr_phone(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE,
-):
-    set_qr_action(context, "qr_phone")
-
-    await get_query_message(update).reply_text(
-        "📱 *Phone → QR*\n\n"
-        "একটি phone number পাঠাও।\n\n"
-        "উদাহরণ:\n"
-        "+8801712345678",
-        parse_mode="Markdown",
+async def start_qr_email(update, context):
+    await _start_qr(
+        update,
+        context,
+        "email",
+        "📧 <b>Email → QR</b>\n\n"
+        "এই format-এ পাঠাও:\n"
+        "<code>Email | Subject | Message</code>\n\n"
+        "Subject ও Message optional।",
     )
 
 
-# ============================================================
-# QR SCANNER
-# ============================================================
-
-async def start_qr_scan(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE,
-):
-    set_qr_action(context, "qr_scan")
-
-    await get_query_message(update).reply_text(
-        "🔍 *Scan QR*\n\n"
-        "একটি QR code-এর image পাঠাও।"
+async def start_qr_phone(update, context):
+    await _start_qr(
+        update,
+        context,
+        "phone",
+        "📱 <b>Phone → QR</b>\n\n"
+        "একটি phone number পাঠাও।",
     )
 
 
-# ============================================================
-# QR → PDF
-# ============================================================
+async def start_qr_scan(update, context):
+    context.user_data.clear()
+    context.user_data["qr_action"] = "qr_scan"
 
-async def start_qr_to_pdf(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE,
-):
-    set_qr_action(context, "qr_to_pdf")
+    query = update.callback_query
 
-    await get_query_message(update).reply_text(
-        "📄 *QR → PDF*\n\n"
-        "একটি QR image পাঠাও।"
+    await query.answer()
+    await query.edit_message_text(
+        "🔍 <b>Scan QR</b>\n\n"
+        "QR code থাকা একটি image পাঠাও।",
+        parse_mode="HTML",
     )
 
 
-# ============================================================
-# QR GENERATION
-# ============================================================
+async def start_qr_to_pdf(update, context):
+    context.user_data.clear()
+    context.user_data["qr_action"] = "qr_to_pdf"
 
-async def generate_and_send_qr(
+    query = update.callback_query
+
+    await query.answer()
+    await query.edit_message_text(
+        "📄 <b>QR → PDF</b>\n\n"
+        "QR code থাকা একটি image পাঠাও।",
+        parse_mode="HTML",
+    )
+
+
+def _safe_url(value):
+    value = value.strip()
+
+    if not value:
+        raise ValueError(
+            "URL cannot be empty."
+        )
+
+    parsed = urllib.parse.urlparse(value)
+
+    if parsed.scheme not in {
+        "http",
+        "https",
+    }:
+        value = "https://" + value
+
+    return value
+
+
+async def _send_qr(
     update,
     context,
-    data,
-    filename="qr.png",
+    generator,
+    *args,
+    **kwargs,
 ):
     folder = create_temp_dir()
 
     try:
         output_path = os.path.join(
             folder,
-            filename,
+            "qr.png",
         )
 
-        generate_qr(
-            data,
+        generator(
+            *args,
+            output_path=output_path,
+            **kwargs,
+        )
+
+        with open(
             output_path,
-        )
-
-        with open(output_path, "rb") as image:
+            "rb",
+        ) as file:
             await update.message.reply_photo(
-                photo=image,
+                photo=file,
                 caption="✅ QR code তৈরি হয়েছে!",
-            )
-
-        # Also provide PNG file
-        with open(output_path, "rb") as image:
-            await update.message.reply_document(
-                document=image,
-                filename=filename,
             )
 
     except Exception as error:
@@ -232,331 +200,155 @@ async def generate_and_send_qr(
         context.user_data.clear()
 
 
-# ============================================================
-# QR TEXT HANDLER
-# ============================================================
-
 async def handle_qr_text(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE,
 ):
-    if not update.message or not update.message.text:
+    if not update.message:
         return
 
-    action = context.user_data.get("qr_action")
+    data = context.user_data
+    action = data.get("qr_action")
 
     if not action:
         return
 
-    text = update.message.text.strip()
+    text = (
+        update.message.text or ""
+    ).strip()
 
     if not text:
         await update.message.reply_text(
-            "⚠️ Empty input দেওয়া যাবে না।"
+            "⚠️ Empty text পাঠানো যাবে না।"
         )
         return
 
-    # ========================================================
-    # TEXT
-    # ========================================================
-
-    if action == "qr_text":
-        await generate_and_send_qr(
-            update,
-            context,
-            text,
-            "text_qr.png",
-        )
-        return
-
-    # ========================================================
-    # URL
-    # ========================================================
-
-    if action == "qr_url":
-        if not re.match(
-            r"^https?://",
-            text,
-            re.IGNORECASE,
-        ):
-            await update.message.reply_text(
-                "⚠️ Valid URL দাও।\n\n"
-                "উদাহরণ:\n"
-                "https://example.com"
+    try:
+        if action == "text":
+            await _send_qr(
+                update,
+                context,
+                generate_qr_text,
+                text,
             )
             return
 
-        await generate_and_send_qr(
-            update,
-            context,
-            text,
-            "url_qr.png",
-        )
-        return
+        if action == "url":
+            url = _safe_url(text)
 
-    # ========================================================
-    # WIFI
-    # ========================================================
-
-    if action == "qr_wifi":
-        parts = [
-            part.strip()
-            for part in text.split("|")
-        ]
-
-        if len(parts) < 2:
-            await update.message.reply_text(
-                "❌ Format ভুল।\n\n"
-                "SSID | PASSWORD | WPA"
+            await _send_qr(
+                update,
+                context,
+                generate_qr_url,
+                url,
             )
             return
 
-        ssid = parts[0]
-        password = parts[1]
+        if action == "wifi":
+            parts = [
+                item.strip()
+                for item in text.split("|")
+            ]
 
-        security = (
-            parts[2]
-            if len(parts) >= 3 and parts[2]
-            else "WPA"
-        )
+            if len(parts) < 2:
+                raise ValueError(
+                    "SSID এবং password দুটোই দিতে হবে।"
+                )
 
-        if not ssid:
-            await update.message.reply_text(
-                "❌ SSID দিতে হবে।"
-            )
-            return
+            ssid = parts[0]
+            password = parts[1]
 
-        try:
-            folder = create_temp_dir()
-
-            output_path = os.path.join(
-                folder,
-                "wifi_qr.png",
-            )
-
-            generate_qr_wifi(
+            await _send_qr(
+                update,
+                context,
+                generate_qr_wifi,
                 ssid,
                 password,
-                security,
-                output_path,
-            )
-
-            with open(output_path, "rb") as image:
-                await update.message.reply_photo(
-                    photo=image,
-                    caption="✅ Wi-Fi QR তৈরি হয়েছে!",
-                )
-
-            with open(output_path, "rb") as image:
-                await update.message.reply_document(
-                    document=image,
-                    filename="wifi_qr.png",
-                )
-
-        except Exception as error:
-            await update.message.reply_text(
-                f"❌ Wi-Fi QR তৈরি করা যায়নি:\n{error}"
-            )
-
-        finally:
-            if "folder" in locals():
-                cleanup_temp_folder(folder)
-
-            context.user_data.clear()
-
-        return
-
-    # ========================================================
-    # CONTACT
-    # ========================================================
-
-    if action == "qr_contact":
-        parts = [
-            part.strip()
-            for part in text.split("|")
-        ]
-
-        if len(parts) < 2:
-            await update.message.reply_text(
-                "❌ Format ভুল।\n\n"
-                "Name | Phone | Email"
             )
             return
 
-        name = parts[0]
-        phone = parts[1]
-        email = parts[2] if len(parts) >= 3 else ""
+        if action == "contact":
+            parts = [
+                item.strip()
+                for item in text.split("|")
+            ]
 
-        if not name or not phone:
-            await update.message.reply_text(
-                "❌ Name এবং Phone অবশ্যই দিতে হবে।"
+            if len(parts) < 2:
+                raise ValueError(
+                    "Name এবং phone দিতে হবে।"
+                )
+
+            name = parts[0]
+            phone = parts[1]
+            email = (
+                parts[2]
+                if len(parts) > 2
+                else ""
             )
-            return
 
-        try:
-            folder = create_temp_dir()
-
-            output_path = os.path.join(
-                folder,
-                "contact_qr.png",
-            )
-
-            generate_qr_contact(
+            await _send_qr(
+                update,
+                context,
+                generate_qr_contact,
                 name,
                 phone,
                 email,
-                output_path,
-            )
-
-            with open(output_path, "rb") as image:
-                await update.message.reply_photo(
-                    photo=image,
-                    caption="✅ Contact QR তৈরি হয়েছে!",
-                )
-
-            with open(output_path, "rb") as image:
-                await update.message.reply_document(
-                    document=image,
-                    filename="contact_qr.png",
-                )
-
-        except Exception as error:
-            await update.message.reply_text(
-                f"❌ Contact QR তৈরি করা যায়নি:\n{error}"
-            )
-
-        finally:
-            if "folder" in locals():
-                cleanup_temp_folder(folder)
-
-            context.user_data.clear()
-
-        return
-
-    # ========================================================
-    # EMAIL
-    # ========================================================
-
-    if action == "qr_email":
-        parts = [
-            part.strip()
-            for part in text.split("|")
-        ]
-
-        if not parts or not parts[0]:
-            await update.message.reply_text(
-                "❌ Email address দিতে হবে।"
             )
             return
 
-        email = parts[0]
-        subject = parts[1] if len(parts) >= 2 else ""
-        message = parts[2] if len(parts) >= 3 else ""
+        if action == "email":
+            parts = [
+                item.strip()
+                for item in text.split("|")
+            ]
 
-        if "@" not in email:
-            await update.message.reply_text(
-                "❌ Valid email address দাও।"
+            email = parts[0]
+
+            if not email:
+                raise ValueError(
+                    "Email address দিতে হবে।"
+                )
+
+            subject = (
+                parts[1]
+                if len(parts) > 1
+                else ""
             )
-            return
 
-        try:
-            folder = create_temp_dir()
-
-            output_path = os.path.join(
-                folder,
-                "email_qr.png",
+            message = (
+                parts[2]
+                if len(parts) > 2
+                else ""
             )
 
-            generate_qr_email(
+            await _send_qr(
+                update,
+                context,
+                generate_qr_email,
                 email,
                 subject,
                 message,
-                output_path,
-            )
-
-            with open(output_path, "rb") as image:
-                await update.message.reply_photo(
-                    photo=image,
-                    caption="✅ Email QR তৈরি হয়েছে!",
-                )
-
-            with open(output_path, "rb") as image:
-                await update.message.reply_document(
-                    document=image,
-                    filename="email_qr.png",
-                )
-
-        except Exception as error:
-            await update.message.reply_text(
-                f"❌ Email QR তৈরি করা যায়নি:\n{error}"
-            )
-
-        finally:
-            if "folder" in locals():
-                cleanup_temp_folder(folder)
-
-            context.user_data.clear()
-
-        return
-
-    # ========================================================
-    # PHONE
-    # ========================================================
-
-    if action == "qr_phone":
-        phone = text
-
-        if not re.match(
-            r"^\+?[0-9][0-9\s\-()]{5,20}$",
-            phone,
-        ):
-            await update.message.reply_text(
-                "❌ Valid phone number দাও।"
             )
             return
 
-        try:
-            folder = create_temp_dir()
-
-            output_path = os.path.join(
-                folder,
-                "phone_qr.png",
+        if action == "phone":
+            await _send_qr(
+                update,
+                context,
+                generate_qr_phone,
+                text,
             )
+            return
 
-            generate_qr_phone(
-                phone,
-                output_path,
-            )
+        await update.message.reply_text(
+            "ℹ️ Unknown QR action."
+        )
 
-            with open(output_path, "rb") as image:
-                await update.message.reply_photo(
-                    photo=image,
-                    caption="✅ Phone QR তৈরি হয়েছে!",
-                )
+    except Exception as error:
+        await update.message.reply_text(
+            f"❌ QR তৈরি করা যায়নি:\n{error}"
+        )
 
-            with open(output_path, "rb") as image:
-                await update.message.reply_document(
-                    document=image,
-                    filename="phone_qr.png",
-                )
-
-        except Exception as error:
-            await update.message.reply_text(
-                f"❌ Phone QR তৈরি করা যায়নি:\n{error}"
-            )
-
-        finally:
-            if "folder" in locals():
-                cleanup_temp_folder(folder)
-
-            context.user_data.clear()
-
-        return
-
-
-# ============================================================
-# QR IMAGE HANDLER
-# ============================================================
 
 async def handle_qr_image(
     update: Update,
@@ -565,12 +357,13 @@ async def handle_qr_image(
     if not update.message:
         return
 
-    action = context.user_data.get("qr_action")
+    data = context.user_data
+    action = data.get("qr_action")
 
-    if action not in (
+    if action not in {
         "qr_scan",
         "qr_to_pdf",
-    ):
+    }:
         return
 
     photo = None
@@ -581,194 +374,218 @@ async def handle_qr_image(
     elif update.message.document:
         document = update.message.document
 
-        filename = document.file_name or ""
+        filename = (
+            document.file_name or ""
+        ).lower()
+
+        mime = (
+            document.mime_type or ""
+        ).lower()
 
         if (
-            filename.lower().endswith(
-                (".jpg", ".jpeg", ".png", ".webp")
+            mime.startswith("image/")
+            or filename.endswith(
+                (
+                    ".jpg",
+                    ".jpeg",
+                    ".png",
+                    ".webp",
+                    ".bmp",
+                )
             )
         ):
             folder = create_temp_dir()
 
             try:
-                file_path = os.path.join(
+                input_path = os.path.join(
                     folder,
-                    filename,
+                    "qr_input",
                 )
 
-                telegram_file = await document.get_file()
+                telegram_file = (
+                    await document.get_file()
+                )
 
                 await telegram_file.download_to_drive(
-                    file_path
+                    input_path
                 )
 
-                await process_qr_image(
+                await _process_qr_image(
                     update,
                     context,
-                    file_path,
-                    action,
+                    input_path,
                     folder,
+                    action,
                 )
 
             except Exception as error:
-                cleanup_temp_folder(folder)
-
                 await update.message.reply_text(
                     f"❌ Image process করা যায়নি:\n{error}"
                 )
 
             return
 
+        await update.message.reply_text(
+            "⚠️ একটি image পাঠাও।"
+        )
+        return
+
     if not photo:
         await update.message.reply_text(
-            "⚠️ একটি QR image পাঠাও।"
+            "⚠️ একটি image পাঠাও।"
         )
         return
 
     folder = create_temp_dir()
 
     try:
-        image_path = os.path.join(
+        input_path = os.path.join(
             folder,
             "qr_input.jpg",
         )
 
-        telegram_file = await photo.get_file()
-
-        await telegram_file.download_to_drive(
-            image_path
+        telegram_file = (
+            await photo.get_file()
         )
 
-        await process_qr_image(
+        await telegram_file.download_to_drive(
+            input_path
+        )
+
+        await _process_qr_image(
             update,
             context,
-            image_path,
-            action,
+            input_path,
             folder,
+            action,
         )
 
     except Exception as error:
-        cleanup_temp_folder(folder)
-
         await update.message.reply_text(
             f"❌ Image process করা যায়নি:\n{error}"
         )
 
 
-# ============================================================
-# PROCESS QR IMAGE
-# ============================================================
-
-async def process_qr_image(
+async def _process_qr_image(
     update,
     context,
-    image_path,
-    action,
+    input_path,
     folder,
+    action,
 ):
     try:
-        # ====================================================
-        # SCAN QR
-        # ====================================================
+        results = scan_qr(input_path)
 
-        if action == "qr_scan":
-            result = scan_qr(image_path)
-
-            if not result:
-                await update.message.reply_text(
-                    "❌ কোনো QR code পাওয়া যায়নি।"
-                )
-                return
-
-            if isinstance(result, list):
-                text = "\n\n".join(
-                    str(item)
-                    for item in result
-                )
-            else:
-                text = str(result)
-
+        if not results:
             await update.message.reply_text(
-                f"✅ QR Scan Result:\n\n{text}"
+                "❌ কোনো QR code পাওয়া যায়নি।"
             )
-
             return
 
-        # ====================================================
-        # QR → PDF
-        # ====================================================
+        if action == "qr_scan":
+            lines = [
+                f"🔳 <b>QR {index}</b>\n"
+                f"<code>{value}</code>"
+                for index, value
+                in enumerate(
+                    results,
+                    start=1,
+                )
+            ]
+
+            await update.message.reply_text(
+                "\n\n".join(lines),
+                parse_mode="HTML",
+            )
+            return
 
         if action == "qr_to_pdf":
-            from reportlab.lib.utils import ImageReader
+            pdf_path = os.path.join(
+                folder,
+                "qr_result.pdf",
+            )
+
+            # Create a PDF containing
+            # the decoded QR information.
             from reportlab.lib.pagesizes import A4
             from reportlab.pdfgen import canvas
 
-            output_path = os.path.join(
-                folder,
-                "qr.pdf",
-            )
-
-            page_width, page_height = A4
-
             pdf = canvas.Canvas(
-                output_path,
+                pdf_path,
                 pagesize=A4,
             )
 
-            image = ImageReader(image_path)
+            width, height = A4
+            y = height - 60
 
-            image_width, image_height = (
-                image.getSize()
+            pdf.setFont(
+                "Helvetica-Bold",
+                14,
             )
 
-            margin = 40
-
-            max_width = (
-                page_width - 2 * margin
-            )
-
-            max_height = (
-                page_height - 2 * margin
-            )
-
-            scale = min(
-                max_width / image_width,
-                max_height / image_height,
-            )
-
-            draw_width = image_width * scale
-            draw_height = image_height * scale
-
-            x = (
-                page_width - draw_width
-            ) / 2
-
-            y = (
-                page_height - draw_height
-            ) / 2
-
-            pdf.drawImage(
-                image,
-                x,
+            pdf.drawString(
+                50,
                 y,
-                width=draw_width,
-                height=draw_height,
-                preserveAspectRatio=True,
+                "QR Code Result",
             )
+
+            y -= 35
+
+            pdf.setFont(
+                "Helvetica",
+                10,
+            )
+
+            for index, value in enumerate(
+                results,
+                start=1,
+            ):
+                text = (
+                    f"QR {index}: {value}"
+                )
+
+                # Basic wrapping.
+                max_chars = 90
+
+                chunks = [
+                    text[i:i + max_chars]
+                    for i in range(
+                        0,
+                        len(text),
+                        max_chars,
+                    )
+                ]
+
+                for chunk in chunks:
+                    if y < 50:
+                        pdf.showPage()
+                        y = height - 60
+                        pdf.setFont(
+                            "Helvetica",
+                            10,
+                        )
+
+                    pdf.drawString(
+                        50,
+                        y,
+                        chunk,
+                    )
+
+                    y -= 16
+
+                y -= 8
 
             pdf.save()
 
-            with open(output_path, "rb") as pdf_file:
+            with open(
+                pdf_path,
+                "rb",
+            ) as file:
                 await update.message.reply_document(
-                    document=pdf_file,
-                    filename="qr.pdf",
-                    caption="✅ QR image → PDF complete!",
+                    document=file,
+                    filename="qr_result.pdf",
+                    caption="📄 QR → PDF complete!",
                 )
-
-    except Exception as error:
-        await update.message.reply_text(
-            f"❌ QR process failed:\n{error}"
-        )
 
     finally:
         cleanup_temp_folder(folder)
