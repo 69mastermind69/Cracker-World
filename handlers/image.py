@@ -3,23 +3,19 @@ import os
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import ContextTypes
 
+from config import MAX_FILE_SIZE_MB
 from services.image_service import (
     resize_image,
     compress_image,
     convert_image,
     get_image_info,
 )
-
 from services.pdf_service import images_to_pdf
-
-from utils.files import (
-    create_temp_dir,
-    cleanup_temp_folder,
-)
+from utils.files import create_temp_dir, cleanup_temp_folder
 
 
-def image_format_keyboard():
-    keyboard = [
+def format_keyboard():
+    return InlineKeyboardMarkup([
         [
             InlineKeyboardButton("JPG", callback_data="convert_jpg"),
             InlineKeyboardButton("PNG", callback_data="convert_png"),
@@ -28,52 +24,67 @@ def image_format_keyboard():
             InlineKeyboardButton("WEBP", callback_data="convert_webp"),
             InlineKeyboardButton("BMP", callback_data="convert_bmp"),
         ],
-        [
-            InlineKeyboardButton("🔙 Back", callback_data="image_menu"),
-        ],
-    ]
-
-    return InlineKeyboardMarkup(keyboard)
+    ])
 
 
 async def start_resize_image(update, context):
     context.user_data.clear()
     context.user_data["image_action"] = "resize"
 
-    await update.callback_query.message.reply_text(
-        "📐 Resize Image\n\n"
-        "প্রথমে একটি image পাঠাও।"
+    query = update.callback_query
+    await query.answer()
+    await query.edit_message_text(
+        "📐 <b>Resize Image</b>\n\n"
+        "প্রথমে image পাঠাও।",
+        parse_mode="HTML",
     )
+
+
+start_resize = start_resize_image
 
 
 async def start_compress_image(update, context):
     context.user_data.clear()
     context.user_data["image_action"] = "compress"
 
-    await update.callback_query.message.reply_text(
-        "🗜️ Compress Image\n\n"
-        "প্রথমে একটি image পাঠাও।"
+    query = update.callback_query
+    await query.answer()
+    await query.edit_message_text(
+        "🗜️ <b>Compress Image</b>\n\n"
+        "প্রথমে image পাঠাও।",
+        parse_mode="HTML",
     )
+
+
+start_compress = start_compress_image
 
 
 async def start_convert_image(update, context):
     context.user_data.clear()
     context.user_data["image_action"] = "convert"
 
-    await update.callback_query.message.reply_text(
-        "🔄 Convert Image\n\n"
-        "কোন format-এ convert করতে চাও?",
-        reply_markup=image_format_keyboard(),
+    query = update.callback_query
+    await query.answer()
+    await query.edit_message_text(
+        "🔄 <b>Convert Image</b>\n\n"
+        "প্রথমে image পাঠাও।",
+        parse_mode="HTML",
     )
+
+
+start_convert = start_convert_image
 
 
 async def start_image_info(update, context):
     context.user_data.clear()
     context.user_data["image_action"] = "info"
 
-    await update.callback_query.message.reply_text(
-        "ℹ️ Image Info\n\n"
-        "একটি image পাঠাও।"
+    query = update.callback_query
+    await query.answer()
+    await query.edit_message_text(
+        "ℹ️ <b>Image Info</b>\n\n"
+        "একটি image পাঠাও।",
+        parse_mode="HTML",
     )
 
 
@@ -86,89 +97,58 @@ async def start_image_to_pdf(update, context):
     context.user_data["image_pdf_folder"] = folder
     context.user_data["image_pdf_paths"] = []
 
-    await update.callback_query.message.reply_text(
-        "🖼️ Image → PDF\n\n"
+    query = update.callback_query
+    await query.answer()
+    await query.edit_message_text(
+        "🖼️ <b>Image → PDF</b>\n\n"
         "এক বা একাধিক image পাঠাও।\n\n"
-        "সব image পাঠানো শেষ হলে /done লিখো।"
+        "সবশেষে /done লিখো।",
+        parse_mode="HTML",
     )
 
 
-async def handle_image(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not update.message:
+start_image_info_tool = start_image_info
+start_image_to_pdf_tool = start_image_to_pdf
+
+
+async def handle_image(update, context):
+    if not update.message or not update.message.photo:
         return
 
-    action = context.user_data.get("image_action")
+    data = context.user_data
+    action = data.get("image_action")
 
     if not action:
         return
 
-    if not update.message.photo:
-        return
-
     photo = update.message.photo[-1]
 
-    # Image → PDF
-    if action == "image_to_pdf":
-        folder = context.user_data.get("image_pdf_folder")
-        image_paths = context.user_data.get("image_pdf_paths", [])
-
-        if not folder:
-            return
-
-        number = len(image_paths) + 1
-
-        file_path = os.path.join(
-            folder,
-            f"image_{number}.jpg",
+    if getattr(photo, "file_size", 0) > MAX_FILE_SIZE_MB * 1024 * 1024:
+        await update.message.reply_text(
+            f"⚠️ Image size {MAX_FILE_SIZE_MB}MB-এর বেশি।"
         )
-
-        try:
-            telegram_file = await photo.get_file()
-            await telegram_file.download_to_drive(file_path)
-
-            image_paths.append(file_path)
-            context.user_data["image_pdf_paths"] = image_paths
-
-            await update.message.reply_text(
-                f"✅ Image {number} যোগ হয়েছে.\n\n"
-                "আরও image পাঠাতে পারো।\n"
-                "সব শেষ হলে /done লিখো।"
-            )
-
-        except Exception as error:
-            await update.message.reply_text(
-                "❌ Image save করা যায়নি:\n"
-                f"{error}"
-            )
-
         return
 
     folder = create_temp_dir()
 
-    input_path = os.path.join(
-        folder,
-        "input.jpg",
-    )
-
     try:
+        input_path = os.path.join(folder, "input.jpg")
+
         telegram_file = await photo.get_file()
         await telegram_file.download_to_drive(input_path)
 
-        # Resize
         if action == "resize":
-            context.user_data["image_processing_folder"] = folder
-            context.user_data["image_processing_input"] = input_path
-            context.user_data["image_waiting_dimensions"] = True
+            data["image_folder"] = folder
+            data["image_input"] = input_path
+            data["image_waiting_dimensions"] = True
 
             await update.message.reply_text(
-                "📐 Image পাওয়া গেছে!\n\n"
-                "এখন width এবং height পাঠাও।\n\n"
-                "উদাহরণ:\n"
-                "800 600"
+                "📐 এখন width ও height পাঠাও।\n\n"
+                "Example: <code>800 600</code>",
+                parse_mode="HTML",
             )
             return
 
-        # Compress
         if action == "compress":
             output_path = os.path.join(
                 folder,
@@ -181,52 +161,80 @@ async def handle_image(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 quality=70,
             )
 
-            with open(output_path, "rb") as image:
+            with open(output_path, "rb") as file:
                 await update.message.reply_document(
-                    document=image,
+                    document=file,
                     filename="compressed.jpg",
-                    caption="✅ Image compressed হয়েছে!",
+                    caption="🗜️ Image compressed!",
                 )
 
-            context.user_data.clear()
             return
 
-        # Convert
         if action == "convert":
-            context.user_data["image_processing_folder"] = folder
-            context.user_data["image_processing_input"] = input_path
+            data["image_processing_folder"] = folder
+            data["image_processing_input"] = input_path
 
             await update.message.reply_text(
-                "🔄 এখন নিচের format থেকে একটি select করো:",
-                reply_markup=image_format_keyboard(),
+                "🔄 কোন format-এ convert করতে চাও?",
+                reply_markup=format_keyboard(),
             )
             return
 
-        # Image Info
         if action == "info":
             info = get_image_info(input_path)
 
-            text = (
-                "ℹ️ Image Information\n\n"
-                f"📄 Filename: {info['filename']}\n"
-                f"📐 Size: {info['width']} × {info['height']}\n"
+            await update.message.reply_text(
+                "ℹ️ <b>Image Info</b>\n\n"
+                f"📄 Name: <code>{info['filename']}</code>\n"
                 f"🗂️ Format: {info['format']}\n"
+                f"📐 Size: {info['width']} × {info['height']}\n"
                 f"🎨 Mode: {info['mode']}\n"
-                f"💾 File Size: {info['size_kb']} KB"
+                f"💾 File Size: {info['size_kb']} KB",
+                parse_mode="HTML",
             )
 
-            await update.message.reply_text(text)
-            context.user_data.clear()
+            return
+
+        if action == "image_to_pdf":
+            pdf_folder = data.get("image_pdf_folder")
+
+            if not pdf_folder:
+                pdf_folder = create_temp_dir()
+                data["image_pdf_folder"] = pdf_folder
+
+            image_path = os.path.join(
+                pdf_folder,
+                f"image_{len(data.get('image_pdf_paths', [])) + 1}.jpg",
+            )
+
+            telegram_file = await photo.get_file()
+            await telegram_file.download_to_drive(image_path)
+
+            data.setdefault(
+                "image_pdf_paths",
+                [],
+            ).append(image_path)
+
+            count = len(data["image_pdf_paths"])
+
+            await update.message.reply_text(
+                f"✅ Image {count} added.\n"
+                "আরও image পাঠাতে পারো।\n"
+                "শেষ হলে /done লিখো।"
+            )
+
+            cleanup_temp_folder(folder)
             return
 
     except Exception as error:
         await update.message.reply_text(
-            "❌ Image process করা যায়নি:\n"
-            f"{error}"
+            f"❌ Image process করা যায়নি:\n{error}"
         )
 
     finally:
-        if action not in ("resize", "convert", "image_to_pdf"):
+        if not data.get("image_waiting_dimensions") and not data.get(
+            "image_processing_input"
+        ):
             cleanup_temp_folder(folder)
 
 
@@ -234,24 +242,17 @@ async def handle_image_text(update, context):
     if not update.message:
         return
 
-    if not context.user_data.get("image_waiting_dimensions"):
+    data = context.user_data
+
+    if not data.get("image_waiting_dimensions"):
         return
 
-    folder = context.user_data.get("image_processing_folder")
-    input_path = context.user_data.get("image_processing_input")
-
-    if not folder or not input_path:
-        return
-
-    text = update.message.text.strip()
-
-    parts = text.replace("x", " ").replace("X", " ").split()
+    parts = (update.message.text or "").split()
 
     if len(parts) != 2:
         await update.message.reply_text(
-            "⚠️ সঠিক format-এ পাঠাও।\n\n"
-            "উদাহরণ:\n"
-            "800 600"
+            "⚠️ এভাবে পাঠাও: <code>800 600</code>",
+            parse_mode="HTML",
         )
         return
 
@@ -264,8 +265,18 @@ async def handle_image_text(update, context):
 
     except ValueError:
         await update.message.reply_text(
-            "⚠️ Width এবং height positive number হতে হবে।"
+            "⚠️ Width ও height positive number হতে হবে।"
         )
+        return
+
+    folder = data.get("image_folder")
+    input_path = data.get("image_input")
+
+    if not folder or not input_path:
+        await update.message.reply_text(
+            "❌ Image process-এর data পাওয়া যায়নি।"
+        )
+        data.clear()
         return
 
     output_path = os.path.join(
@@ -282,22 +293,21 @@ async def handle_image_text(update, context):
             keep_aspect=False,
         )
 
-        with open(output_path, "rb") as image:
+        with open(output_path, "rb") as file:
             await update.message.reply_document(
-                document=image,
+                document=file,
                 filename="resized.jpg",
-                caption="✅ Image resize হয়েছে!",
+                caption=f"📐 Resized to {width} × {height}",
             )
 
     except Exception as error:
         await update.message.reply_text(
-            "❌ Resize করা যায়নি:\n"
-            f"{error}"
+            f"❌ Resize করা যায়নি:\n{error}"
         )
 
     finally:
         cleanup_temp_folder(folder)
-        context.user_data.clear()
+        data.clear()
 
 
 async def handle_convert_format(
@@ -306,21 +316,31 @@ async def handle_convert_format(
     output_format,
 ):
     query = update.callback_query
+    data = context.user_data
 
-    if query:
-        await query.answer()
-
-    folder = context.user_data.get("image_processing_folder")
-    input_path = context.user_data.get("image_processing_input")
-
-    if not folder or not input_path:
-        if query:
-            await query.message.reply_text(
-                "⚠️ প্রথমে একটি image পাঠাও।"
-            )
+    if data.get("image_action") != "convert":
+        await query.answer(
+            "No active image conversion.",
+            show_alert=True,
+        )
         return
 
-    extension = output_format.lower().replace(".", "")
+    folder = data.get(
+        "image_processing_folder"
+    )
+    input_path = data.get(
+        "image_processing_input"
+    )
+
+    if not folder or not input_path:
+        await query.answer(
+            "Image data পাওয়া যায়নি।",
+            show_alert=True,
+        )
+        data.clear()
+        return
+
+    extension = "jpg" if output_format == "jpeg" else output_format
 
     output_path = os.path.join(
         folder,
@@ -334,51 +354,53 @@ async def handle_convert_format(
             output_format,
         )
 
-        target = query.message if query else update.message
+        await query.answer("Conversion complete!")
 
-        with open(output_path, "rb") as image:
-            await target.reply_document(
-                document=image,
+        with open(output_path, "rb") as file:
+            await query.message.reply_document(
+                document=file,
                 filename=f"converted.{extension}",
-                caption=(
-                    f"✅ Image → {output_format.upper()} "
-                    "conversion হয়েছে!"
-                ),
+                caption=f"🔄 Converted to {output_format.upper()}",
             )
 
     except Exception as error:
-        target = query.message if query else update.message
-
-        await target.reply_text(
-            "❌ Convert করা যায়নি:\n"
-            f"{error}"
+        await query.answer(
+            "Conversion failed.",
+            show_alert=True,
+        )
+        await query.message.reply_text(
+            f"❌ Image convert করা যায়নি:\n{error}"
         )
 
     finally:
         cleanup_temp_folder(folder)
-        context.user_data.clear()
+        data.clear()
 
 
 async def done_image_to_pdf(update, context):
-    action = context.user_data.get("image_action")
+    if not update.message:
+        return
 
-    if action != "image_to_pdf":
-        return False
+    data = context.user_data
 
-    folder = context.user_data.get("image_pdf_folder")
-    image_paths = context.user_data.get(
-        "image_pdf_paths",
-        [],
-    )
+    if data.get("image_action") != "image_to_pdf":
+        return
+
+    folder = data.get("image_pdf_folder")
+    paths = data.get("image_pdf_paths", [])
+
+    if not paths:
+        await update.message.reply_text(
+            "❌ কোনো image যোগ করা হয়নি।"
+        )
+        return
 
     if not folder:
-        return True
-
-    if not image_paths:
         await update.message.reply_text(
-            "⚠️ কোনো image পাওয়া যায়নি।"
+            "❌ Temporary folder পাওয়া যায়নি।"
         )
-        return True
+        data.clear()
+        return
 
     output_path = os.path.join(
         folder,
@@ -387,33 +409,22 @@ async def done_image_to_pdf(update, context):
 
     try:
         images_to_pdf(
-            image_paths,
+            paths,
             output_path,
         )
 
-        with open(output_path, "rb") as pdf:
+        with open(output_path, "rb") as file:
             await update.message.reply_document(
-                document=pdf,
+                document=file,
                 filename="images.pdf",
-                caption="✅ Images থেকে PDF তৈরি হয়েছে!",
+                caption="📄 Image → PDF complete!",
             )
 
     except Exception as error:
         await update.message.reply_text(
-            "❌ Image → PDF করা যায়নি:\n"
-            f"{error}"
+            f"❌ PDF তৈরি করা যায়নি:\n{error}"
         )
 
     finally:
         cleanup_temp_folder(folder)
-        context.user_data.clear()
-
-    return True
-
-
-# Backward-compatible aliases
-start_resize = start_resize_image
-start_compress = start_compress_image
-start_convert = start_convert_image
-start_image_info_tool = start_image_info
-start_image_to_pdf_tool = start_image_to_pdf
+        data.clear()
