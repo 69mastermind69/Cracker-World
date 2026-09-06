@@ -26,23 +26,26 @@ def text_to_voice(
 
     engine = pyttsx3.init()
 
-    engine.setProperty(
-        "rate",
-        int(rate),
-    )
+    try:
+        engine.setProperty(
+            "rate",
+            int(rate),
+        )
 
-    engine.setProperty(
-        "volume",
-        max(0.0, min(1.0, float(volume))),
-    )
+        engine.setProperty(
+            "volume",
+            max(0.0, min(1.0, float(volume))),
+        )
 
-    engine.save_to_file(
-        text,
-        output_path,
-    )
+        engine.save_to_file(
+            text,
+            output_path,
+        )
 
-    engine.runAndWait()
-    engine.stop()
+        engine.runAndWait()
+
+    finally:
+        engine.stop()
 
     if not os.path.exists(output_path):
         raise RuntimeError(
@@ -75,17 +78,17 @@ def save_audio(
     output_path,
     output_format="mp3",
 ):
-    """Save audio to selected format."""
+    """Save audio to a supported format."""
 
     output_format = (
-        output_format
+        str(output_format)
         .lower()
         .replace(".", "")
     )
 
     if output_format not in SUPPORTED_AUDIO_FORMATS:
         raise ValueError(
-            "Unsupported audio format."
+            f"Unsupported audio format: {output_format}"
         )
 
     audio.export(
@@ -107,35 +110,67 @@ def convert_audio(
 
     audio = load_audio(input_path)
 
-    return save_audio(
-        audio,
-        output_path,
-        output_format,
-    )
+    try:
+        return save_audio(
+            audio,
+            output_path,
+            output_format,
+        )
+    finally:
+        del audio
 
 
 def change_volume(
     input_path,
     output_path,
-    volume_db,
+    volume_percent,
 ):
-    """Increase or decrease audio volume."""
+    """
+    Change volume using percentage.
+
+    100 = original
+    150 = louder
+    50  = quieter
+    """
+
+    volume_percent = float(volume_percent)
+
+    if volume_percent <= 0:
+        raise ValueError(
+            "Volume percentage must be greater than 0."
+        )
 
     audio = load_audio(input_path)
 
-    changed_audio = audio + float(volume_db)
+    try:
+        multiplier = volume_percent / 100.0
 
-    output_format = (
-        os.path.splitext(output_path)[1]
-        .lower()
-        .replace(".", "")
-    )
+        if multiplier <= 0:
+            raise ValueError(
+                "Invalid volume percentage."
+            )
 
-    return save_audio(
-        changed_audio,
-        output_path,
-        output_format,
-    )
+        # Convert multiplier to decibels.
+        import math
+
+        db_change = 20 * math.log10(multiplier)
+
+        changed_audio = audio + db_change
+
+        output_format = (
+            os.path.splitext(output_path)[1]
+            .lower()
+            .replace(".", "")
+        )
+
+        return save_audio(
+            changed_audio,
+            output_path,
+            output_format,
+        )
+
+    finally:
+        del audio
 
 
 def cut_audio(
@@ -161,34 +196,47 @@ def cut_audio(
 
     audio = load_audio(input_path)
 
-    start_ms = int(start_seconds * 1000)
-    end_ms = int(end_seconds * 1000)
-
-    if start_ms >= len(audio):
-        raise ValueError(
-            "Start time is beyond the audio length."
+    try:
+        start_ms = int(
+            start_seconds * 1000
+        )
+        end_ms = int(
+            end_seconds * 1000
         )
 
-    end_ms = min(
-        end_ms,
-        len(audio),
-    )
+        if start_ms >= len(audio):
+            raise ValueError(
+                "Start time is beyond the audio length."
+            )
 
-    clipped_audio = audio[
-        start_ms:end_ms
-    ]
+        end_ms = min(
+            end_ms,
+            len(audio),
+        )
 
-    output_format = (
-        os.path.splitext(output_path)[1]
-        .lower()
-        .replace(".", "")
-    )
+        if end_ms <= start_ms:
+            raise ValueError(
+                "Selected audio section is empty."
+            )
 
-    return save_audio(
-        clipped_audio,
-        output_path,
-        output_format,
-    )
+        clipped_audio = audio[
+            start_ms:end_ms
+        ]
+
+        output_format = (
+            os.path.splitext(output_path)[1]
+            .lower()
+            .replace(".", "")
+        )
+
+        return save_audio(
+            clipped_audio,
+            output_path,
+            output_format,
+        )
+
+    finally:
+        del audio
 
 
 def get_audio_info(input_path):
@@ -196,37 +244,57 @@ def get_audio_info(input_path):
 
     audio = load_audio(input_path)
 
-    file_size = os.path.getsize(
-        input_path
-    )
-
-    duration_seconds = (
-        len(audio) / 1000
-    )
-
-    return {
-        "filename": os.path.basename(
+    try:
+        file_size = os.path.getsize(
             input_path
-        ),
-        "format": os.path.splitext(
-            input_path
-        )[1].replace(".", "").upper(),
-        "duration": round(
-            duration_seconds,
-            2,
-        ),
-        "channels": audio.channels,
-        "sample_rate": audio.frame_rate,
-        "sample_width": audio.sample_width,
-        "file_size_kb": round(
-            file_size / 1024,
-            2,
-        ),
-        "file_size_mb": round(
-            file_size / (1024 * 1024),
-            2,
-        ),
-    }
+        )
+
+        duration_seconds = (
+            len(audio) / 1000
+        )
+
+        return {
+            "filename": os.path.basename(
+                input_path
+            ),
+            "format": (
+                os.path.splitext(
+                    input_path
+                )[1]
+                .replace(".", "")
+                .upper()
+            ),
+            "duration_seconds": round(
+                duration_seconds,
+                2,
+            ),
+            "duration": round(
+                duration_seconds,
+                2,
+            ),
+            "channels": audio.channels,
+            "sample_rate": audio.frame_rate,
+            "sample_width": audio.sample_width,
+            "size_kb": round(
+                file_size / 1024,
+                2,
+            ),
+            "size_mb": round(
+                file_size / (1024 * 1024),
+                2,
+            ),
+            "file_size_kb": round(
+                file_size / 1024,
+                2,
+            ),
+            "file_size_mb": round(
+                file_size / (1024 * 1024),
+                2,
+            ),
+        }
+
+    finally:
+        del audio
 
 
 def get_audio_duration(input_path):
@@ -234,4 +302,7 @@ def get_audio_duration(input_path):
 
     audio = load_audio(input_path)
 
-    return len(audio) / 1000
+    try:
+        return len(audio) / 1000
+    finally:
+        del audio
