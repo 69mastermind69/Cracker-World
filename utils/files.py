@@ -1,74 +1,189 @@
 import os
-import uuid
 import shutil
-from pathlib import Path
-
-from config import TEMP_DIR
+import uuid
 
 
-def ensure_temp_dir():
-    """Create the temporary directory if it does not exist."""
-    Path(TEMP_DIR).mkdir(parents=True, exist_ok=True)
-    return TEMP_DIR
+def create_temp_dir(base_dir="/tmp/telegram_bot"):
+    """
+    Create a unique temporary directory.
+    """
 
-
-def create_temp_dir():
-    """Create a unique temporary folder for one user's task."""
-    ensure_temp_dir()
+    os.makedirs(base_dir, exist_ok=True)
 
     folder = os.path.join(
-        TEMP_DIR,
-        str(uuid.uuid4())
+        base_dir,
+        uuid.uuid4().hex,
     )
 
-    os.makedirs(folder, exist_ok=True)
+    os.makedirs(
+        folder,
+        exist_ok=True,
+    )
+
     return folder
 
 
-def get_file_path(folder, filename):
-    """Create a safe path inside the given folder."""
-    filename = os.path.basename(filename)
-    return os.path.join(folder, filename)
-
-
-def delete_file(path):
-    """Delete a single file safely."""
-    try:
-        if os.path.isfile(path):
-            os.remove(path)
-            return True
-    except Exception:
-        pass
-
-    return False
-
-
-def delete_folder(folder):
-    """Delete a folder and everything inside it."""
-    try:
-        if os.path.isdir(folder):
-            shutil.rmtree(folder, ignore_errors=True)
-            return True
-    except Exception:
-        pass
-
-    return False
-
-
 def cleanup_temp_folder(folder):
-    """Clean up a user's temporary processing folder."""
-    return delete_folder(folder)
+    """
+    Safely remove a temporary folder.
+    """
+
+    if not folder:
+        return
+
+    folder = os.path.abspath(folder)
+
+    # Only remove folders inside our temp directory.
+    allowed_base = os.path.abspath(
+        "/tmp/telegram_bot"
+    )
+
+    if not (
+        folder == allowed_base
+        or folder.startswith(
+            allowed_base + os.sep
+        )
+    ):
+        return
+
+    if os.path.exists(folder):
+        shutil.rmtree(
+            folder,
+            ignore_errors=True,
+        )
+
+
+def ensure_directory(path):
+    """
+    Create a directory if it does not exist.
+    """
+
+    os.makedirs(
+        path,
+        exist_ok=True,
+    )
+
+    return path
+
+
+def get_extension(filename):
+    """
+    Return file extension without dot.
+    """
+
+    if not filename:
+        return ""
+
+    return os.path.splitext(
+        filename
+    )[1].lower().lstrip(".")
+
+
+def get_filename_without_extension(filename):
+    """
+    Return filename without extension.
+    """
+
+    if not filename:
+        return ""
+
+    return os.path.splitext(
+        os.path.basename(filename)
+    )[0]
+
+
+def safe_filename(filename, default="file"):
+    """
+    Create a filesystem-safe filename.
+    """
+
+    if not filename:
+        return default
+
+    filename = os.path.basename(
+        str(filename)
+    )
+
+    allowed = (
+        "abcdefghijklmnopqrstuvwxyz"
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+        "0123456789"
+        "._-"
+    )
+
+    cleaned = "".join(
+        char if char in allowed else "_"
+        for char in filename
+    )
+
+    cleaned = cleaned.strip(".")
+
+    return cleaned or default
+
+
+def get_unique_filename(
+    folder,
+    filename,
+):
+    """
+    Return a non-conflicting file path.
+    """
+
+    filename = safe_filename(filename)
+
+    base, extension = os.path.splitext(
+        filename
+    )
+
+    path = os.path.join(
+        folder,
+        filename,
+    )
+
+    counter = 1
+
+    while os.path.exists(path):
+        path = os.path.join(
+            folder,
+            f"{base}_{counter}{extension}",
+        )
+        counter += 1
+
+    return path
+
+
+def file_exists(path):
+    return bool(
+        path
+        and os.path.isfile(path)
+    )
+
+
+def folder_exists(path):
+    return bool(
+        path
+        and os.path.isdir(path)
+    )
+
+
+def get_file_size(path):
+    """
+    Return file size in bytes.
+    """
+
+    if not file_exists(path):
+        return 0
+
+    return os.path.getsize(path)
 
 
 def get_file_size_mb(path):
-    """Return file size in MB."""
-    try:
-        size_bytes = os.path.getsize(path)
-        return round(size_bytes / (1024 * 1024), 2)
-    except Exception:
-        return 0.0
+    """
+    Return file size in MB.
+    """
 
-
-def is_allowed_size(path, max_size_mb=20):
-    """Check whether a file is within the allowed size."""
-    return get_file_size_mb(path) <= max_size_mb
+    return round(
+        get_file_size(path)
+        / (1024 * 1024),
+        2,
+    )
