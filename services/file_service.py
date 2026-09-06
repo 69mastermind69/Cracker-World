@@ -1,11 +1,8 @@
 import os
 import zipfile
-from pathlib import Path
 
 
 def get_file_info(file_path):
-    """Return basic information about a file."""
-
     if not os.path.isfile(file_path):
         raise FileNotFoundError("File not found.")
 
@@ -13,7 +10,7 @@ def get_file_info(file_path):
 
     return {
         "filename": os.path.basename(file_path),
-        "extension": Path(file_path).suffix or "None",
+        "extension": os.path.splitext(file_path)[1].lower(),
         "size_bytes": size_bytes,
         "size_kb": round(size_bytes / 1024, 2),
         "size_mb": round(size_bytes / (1024 * 1024), 2),
@@ -21,24 +18,13 @@ def get_file_info(file_path):
 
 
 def create_zip(input_files, output_path):
-    """Create a ZIP archive from multiple files."""
-
     if not input_files:
-        raise ValueError("No files provided.")
+        raise ValueError("No files to compress.")
 
-    valid_files = [
-        file_path
-        for file_path in input_files
-        if os.path.isfile(file_path)
-    ]
+    output_dir = os.path.dirname(output_path)
 
-    if not valid_files:
-        raise ValueError("No valid files found.")
-
-    os.makedirs(
-        os.path.dirname(output_path) or ".",
-        exist_ok=True,
-    )
+    if output_dir:
+        os.makedirs(output_dir, exist_ok=True)
 
     with zipfile.ZipFile(
         output_path,
@@ -46,7 +32,10 @@ def create_zip(input_files, output_path):
         compression=zipfile.ZIP_DEFLATED,
     ) as archive:
 
-        for file_path in valid_files:
+        for file_path in input_files:
+            if not os.path.isfile(file_path):
+                continue
+
             archive.write(
                 file_path,
                 arcname=os.path.basename(file_path),
@@ -55,68 +44,63 @@ def create_zip(input_files, output_path):
     return output_path
 
 
-def extract_zip(zip_path, output_dir):
-    """Extract a ZIP archive safely."""
+def _safe_extract_path(output_dir, member_name):
+    output_dir = os.path.abspath(output_dir)
+    target_path = os.path.abspath(
+        os.path.join(output_dir, member_name)
+    )
 
+    if os.path.commonpath(
+        [output_dir, target_path]
+    ) != output_dir:
+        raise ValueError(
+            "Unsafe ZIP path detected."
+        )
+
+    return target_path
+
+
+def extract_zip(zip_path, output_dir):
     if not os.path.isfile(zip_path):
         raise FileNotFoundError("ZIP file not found.")
 
     if not zipfile.is_zipfile(zip_path):
         raise ValueError("Invalid ZIP file.")
 
-    os.makedirs(
-        output_dir,
-        exist_ok=True,
-    )
-
-    output_dir = os.path.abspath(output_dir)
+    os.makedirs(output_dir, exist_ok=True)
 
     extracted_files = []
 
     with zipfile.ZipFile(zip_path, "r") as archive:
-
-        # Security check against ZIP path traversal.
         for member in archive.infolist():
-
-            member_path = os.path.abspath(
-                os.path.join(
+            if member.is_dir():
+                _safe_extract_path(
                     output_dir,
                     member.filename,
                 )
+                continue
+
+            target_path = _safe_extract_path(
+                output_dir,
+                member.filename,
             )
 
-            if not (
-                member_path == output_dir
-                or member_path.startswith(
-                    output_dir + os.sep
-                )
-            ):
-                raise ValueError(
-                    "Unsafe ZIP file detected."
-                )
+            os.makedirs(
+                os.path.dirname(target_path),
+                exist_ok=True,
+            )
 
-        archive.extractall(output_dir)
+            with archive.open(member, "r") as source:
+                with open(target_path, "wb") as target:
+                    target.write(source.read())
 
-        for root, _, files in os.walk(output_dir):
-
-            for filename in files:
-                extracted_files.append(
-                    os.path.join(
-                        root,
-                        filename,
-                    )
-                )
+            extracted_files.append(target_path)
 
     return extracted_files
 
 
 def is_zip_file(file_path):
-    """Check whether a file is a valid ZIP archive."""
-
     if not os.path.isfile(file_path):
         return False
 
-    try:
-        return zipfile.is_zipfile(file_path)
-    except Exception:
-        return False
+    return zipfile.is_zipfile(file_path)
