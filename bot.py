@@ -261,6 +261,13 @@ async def button_handler(
         )
         return
 
+    if data == "pdf_to_image":
+        await start_pdf_to_image(
+            update,
+            context,
+        )
+        return
+    
     if data == "pdf_to_text":
         await start_pdf_to_text(
             update,
@@ -602,7 +609,6 @@ async def button_handler(
     # =====================================================
 
     future_features = {
-        "pdf_to_image": "🖼️ PDF → Image",
         "create_zip": "🗜️ Create ZIP",
         "extract_zip": "📦 Extract ZIP",
         "file_converter": "🔄 File Converter",
@@ -755,7 +761,24 @@ async def document_handler(
     if not update.message:
         return
 
-    # Audio files
+    # =====================================================
+    # PDF → IMAGE
+    # =====================================================
+
+    if context.user_data.get(
+        "pdf_action"
+    ) == "pdf_to_image":
+
+        await handle_pdf_to_image(
+            update,
+            context,
+        )
+        return
+
+    # =====================================================
+    # AUDIO FILES
+    # =====================================================
+
     if context.user_data.get(
         "audio_action"
     ):
@@ -766,7 +789,10 @@ async def document_handler(
         )
         return
 
-    # PDF files
+    # =====================================================
+    # OTHER PDF FILES
+    # =====================================================
+
     await handle_pdf_document(
         update,
         context,
