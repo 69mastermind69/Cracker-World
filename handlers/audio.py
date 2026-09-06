@@ -1,8 +1,9 @@
 import os
 
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import ContextTypes
 
+from config import MAX_FILE_SIZE_MB
 from services.audio_service import (
     text_to_voice,
     convert_audio,
@@ -10,137 +11,214 @@ from services.audio_service import (
     cut_audio,
     get_audio_info,
 )
-
-from utils.files import create_temp_dir, cleanup_temp_folder
-
-
-AUDIO_FORMATS = ["mp3", "wav", "ogg", "m4a", "flac"]
+from utils.files import (
+    create_temp_dir,
+    cleanup_temp_folder,
+)
 
 
 def audio_format_keyboard():
-    keyboard = [
+    return InlineKeyboardMarkup([
         [
-            InlineKeyboardButton("MP3", callback_data="audio_mp3"),
-            InlineKeyboardButton("WAV", callback_data="audio_wav"),
+            InlineKeyboardButton(
+                "🎵 MP3",
+                callback_data="audio_mp3",
+            ),
+            InlineKeyboardButton(
+                "🔊 WAV",
+                callback_data="audio_wav",
+            ),
         ],
         [
-            InlineKeyboardButton("OGG", callback_data="audio_ogg"),
-            InlineKeyboardButton("M4A", callback_data="audio_m4a"),
+            InlineKeyboardButton(
+                "🎧 OGG",
+                callback_data="audio_ogg",
+            ),
+            InlineKeyboardButton(
+                "📱 M4A",
+                callback_data="audio_m4a",
+            ),
         ],
         [
-            InlineKeyboardButton("FLAC", callback_data="audio_flac"),
+            InlineKeyboardButton(
+                "🎼 FLAC",
+                callback_data="audio_flac",
+            ),
         ],
-        [
-            InlineKeyboardButton("🔙 Back", callback_data="audio_menu"),
-        ],
-    ]
-
-    return InlineKeyboardMarkup(keyboard)
+    ])
 
 
-async def start_text_to_voice(update, context):
-    context.user_data.clear()
-    context.user_data["audio_action"] = "text_to_voice"
-
-    await update.callback_query.message.reply_text(
-        "🗣️ Text → Voice\n\n"
-        "যে text-টা voice করতে চাও সেটা পাঠাও।"
+def _too_large(size_bytes):
+    return (
+        size_bytes
+        and size_bytes
+        > MAX_FILE_SIZE_MB * 1024 * 1024
     )
 
 
-async def start_voice_changer(update, context):
+async def start_text_to_voice(
+    update,
+    context,
+):
     context.user_data.clear()
-    context.user_data["audio_action"] = "voice_changer"
+    context.user_data["audio_action"] = (
+        "text_to_voice"
+    )
 
-    await update.callback_query.message.reply_text(
-        "🎭 Voice Changer\n\n"
-        "একটি audio/voice পাঠাও।\n\n"
-        "Note: Free server version-এ audio re-export করা হবে।"
+    query = update.callback_query
+    await query.answer()
+
+    await query.edit_message_text(
+        "🗣️ <b>Text → Voice</b>\n\n"
+        "যে text voice করতে চাও সেটা পাঠাও।",
+        parse_mode="HTML",
     )
 
 
-async def start_audio_cutter(update, context):
+async def start_voice_changer(
+    update,
+    context,
+):
     context.user_data.clear()
-    context.user_data["audio_action"] = "cutter"
+    context.user_data["audio_action"] = (
+        "voice_changer"
+    )
 
-    await update.callback_query.message.reply_text(
-        "✂️ Audio Cutter\n\n"
-        "একটি audio/voice পাঠাও।"
+    query = update.callback_query
+    await query.answer()
+
+    await query.edit_message_text(
+        "🎭 <b>Voice Changer</b>\n\n"
+        "একটি audio বা voice message পাঠাও।",
+        parse_mode="HTML",
     )
 
 
-async def start_audio_converter(update, context):
+async def start_audio_cutter(
+    update,
+    context,
+):
     context.user_data.clear()
-    context.user_data["audio_action"] = "converter"
+    context.user_data["audio_action"] = (
+        "cutter"
+    )
 
-    await update.callback_query.message.reply_text(
-        "🔄 Audio Converter\n\n"
-        "একটি audio/voice পাঠাও।"
+    query = update.callback_query
+    await query.answer()
+
+    await query.edit_message_text(
+        "✂️ <b>Audio Cutter</b>\n\n"
+        "একটি audio/voice পাঠাও।",
+        parse_mode="HTML",
     )
 
 
-async def start_volume_changer(update, context):
+async def start_audio_converter(
+    update,
+    context,
+):
     context.user_data.clear()
-    context.user_data["audio_action"] = "volume"
+    context.user_data["audio_action"] = (
+        "converter"
+    )
 
-    await update.callback_query.message.reply_text(
-        "🔊 Volume Changer\n\n"
-        "একটি audio/voice পাঠাও।"
+    query = update.callback_query
+    await query.answer()
+
+    await query.edit_message_text(
+        "🔄 <b>Audio Converter</b>\n\n"
+        "একটি audio/voice পাঠাও।",
+        parse_mode="HTML",
     )
 
 
-async def start_audio_info(update, context):
+async def start_volume_changer(
+    update,
+    context,
+):
     context.user_data.clear()
-    context.user_data["audio_action"] = "info"
+    context.user_data["audio_action"] = (
+        "volume"
+    )
 
-    await update.callback_query.message.reply_text(
-        "ℹ️ Audio Info\n\n"
-        "একটি audio/voice পাঠাও।"
+    query = update.callback_query
+    await query.answer()
+
+    await query.edit_message_text(
+        "🔊 <b>Volume Changer</b>\n\n"
+        "একটি audio/voice পাঠাও।",
+        parse_mode="HTML",
     )
 
 
-async def handle_audio_text(update, context):
-    if not update.message or not update.message.text:
+async def start_audio_info(
+    update,
+    context,
+):
+    context.user_data.clear()
+    context.user_data["audio_action"] = (
+        "info"
+    )
+
+    query = update.callback_query
+    await query.answer()
+
+    await query.edit_message_text(
+        "ℹ️ <b>Audio Info</b>\n\n"
+        "একটি audio/voice পাঠাও।",
+        parse_mode="HTML",
+    )
+
+
+async def handle_audio_text(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+):
+    if not update.message:
         return
 
-    if context.user_data.get("audio_action") != "text_to_voice":
+    if (
+        context.user_data.get("audio_action")
+        != "text_to_voice"
+    ):
         return
 
-    text = update.message.text.strip()
+    text = (
+        update.message.text or ""
+    ).strip()
 
     if not text:
         await update.message.reply_text(
-            "⚠️ কিছু text পাঠাও।"
+            "⚠️ Empty text পাঠানো যাবে না।"
         )
         return
 
     folder = create_temp_dir()
+
     output_path = os.path.join(
         folder,
-        "voice.wav",
+        "voice.mp3",
     )
 
     try:
-        await update.message.reply_text(
-            "⏳ Voice তৈরি হচ্ছে..."
-        )
-
         text_to_voice(
             text,
             output_path,
         )
 
-        with open(output_path, "rb") as audio:
-            await update.message.reply_document(
-                document=audio,
-                filename="voice.wav",
-                caption="✅ Text → Voice complete!",
+        with open(
+            output_path,
+            "rb",
+        ) as file:
+            await update.message.reply_audio(
+                audio=file,
+                filename="voice.mp3",
+                caption="🗣️ Text → Voice complete!",
             )
 
     except Exception as error:
         await update.message.reply_text(
-            "❌ Voice তৈরি করা যায়নি.\n\n"
-            f"{error}"
+            f"❌ Voice তৈরি করা যায়নি:\n{error}"
         )
 
     finally:
@@ -148,90 +226,94 @@ async def handle_audio_text(update, context):
         context.user_data.clear()
 
 
-async def handle_audio_file(update, context):
+async def handle_audio_file(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+):
     if not update.message:
         return
 
-    action = context.user_data.get("audio_action")
+    data = context.user_data
+    action = data.get("audio_action")
 
-    if action not in (
+    if action not in {
         "voice_changer",
         "cutter",
         "converter",
         "volume",
         "info",
-    ):
+    }:
         return
 
-    message = update.message
+    source = (
+        update.message.audio
+        or update.message.voice
+        or update.message.document
+    )
 
-    telegram_file = None
-    original_name = "audio"
-
-    if message.audio:
-        telegram_file = await message.audio.get_file()
-        original_name = (
-            message.audio.file_name
-            or "audio.mp3"
+    if not source:
+        await update.message.reply_text(
+            "⚠️ একটি audio/voice file পাঠাও।"
         )
+        return
 
-    elif message.voice:
-        telegram_file = await message.voice.get_file()
-        original_name = "voice.ogg"
+    size = getattr(
+        source,
+        "file_size",
+        0,
+    )
 
-    elif message.document:
-        telegram_file = await message.document.get_file()
-        original_name = (
-            message.document.file_name
-            or "audio"
+    if _too_large(size):
+        await update.message.reply_text(
+            f"⚠️ File size {MAX_FILE_SIZE_MB}MB-এর বেশি।"
         )
-
-    else:
         return
 
     folder = create_temp_dir()
 
-    extension = os.path.splitext(
-        original_name
-    )[1].lower()
-
-    if not extension:
-        extension = ".ogg"
-
-    input_path = os.path.join(
-        folder,
-        f"input{extension}",
-    )
-
     try:
+        original_name = getattr(
+            source,
+            "file_name",
+            None,
+        ) or "audio"
+
+        extension = os.path.splitext(
+            original_name
+        )[1].lower()
+
+        if not extension:
+            extension = ".ogg"
+
+        input_path = os.path.join(
+            folder,
+            f"input{extension}",
+        )
+
+        telegram_file = await source.get_file()
+
         await telegram_file.download_to_drive(
             input_path
         )
 
         if action == "info":
-            info = get_audio_info(input_path)
+            info = get_audio_info(
+                input_path
+            )
 
-            text = (
-                "ℹ️ Audio Information\n\n"
-                f"📄 Filename: {info['filename']}\n"
+            await update.message.reply_text(
+                "ℹ️ <b>Audio Info</b>\n\n"
+                f"📄 Name: <code>{info['filename']}</code>\n"
                 f"🎵 Format: {info['format']}\n"
-                f"⏱️ Duration: {info['duration_seconds']} sec\n"
+                f"⏱️ Duration: {info['duration_seconds']:.2f}s\n"
                 f"🔊 Channels: {info['channels']}\n"
                 f"🎚️ Sample Rate: {info['sample_rate']} Hz\n"
-                f"💾 Size: {info['size_kb']} KB"
+                f"💾 Size: {info['size_kb']:.2f} KB",
+                parse_mode="HTML",
             )
 
-            await message.reply_text(text)
-            return
-
-        if action == "converter":
-            context.user_data["audio_folder"] = folder
-            context.user_data["audio_input"] = input_path
-
-            await message.reply_text(
-                "🔄 কোন format-এ convert করতে চাও?",
-                reply_markup=audio_format_keyboard(),
-            )
+            cleanup_temp_folder(folder)
+            context.user_data.clear()
             return
 
         if action == "voice_changer":
@@ -240,63 +322,76 @@ async def handle_audio_file(update, context):
                 "voice_changed.mp3",
             )
 
+            # Basic free processing:
+            # convert the voice to MP3.
             convert_audio(
                 input_path,
                 output_path,
                 "mp3",
             )
 
-            with open(output_path, "rb") as audio:
-                await message.reply_document(
-                    document=audio,
+            with open(
+                output_path,
+                "rb",
+            ) as file:
+                await update.message.reply_audio(
+                    audio=file,
                     filename="voice_changed.mp3",
-                    caption="✅ Voice processed!",
+                    caption=(
+                        "🎭 Voice processing complete!"
+                    ),
                 )
 
+            cleanup_temp_folder(folder)
+            context.user_data.clear()
+            return
+
+        if action == "converter":
+            data["audio_folder"] = folder
+            data["audio_input"] = input_path
+
+            await update.message.reply_text(
+                "🔄 কোন format-এ convert করতে চাও?",
+                reply_markup=audio_format_keyboard(),
+            )
             return
 
         if action == "volume":
-            context.user_data["audio_folder"] = folder
-            context.user_data["audio_input"] = input_path
-            context.user_data["audio_waiting_volume"] = True
+            data["audio_folder"] = folder
+            data["audio_input"] = input_path
+            data["audio_waiting_volume"] = True
 
-            await message.reply_text(
-                "🔊 Volume কত শতাংশ করতে চাও?\n\n"
-                "উদাহরণ:\n"
-                "150 = 1.5x volume\n"
-                "50 = half volume"
+            await update.message.reply_text(
+                "🔊 Volume percentage পাঠাও।\n\n"
+                "Example:\n"
+                "<code>150</code> = louder\n"
+                "<code>100</code> = original\n"
+                "<code>50</code> = quieter",
+                parse_mode="HTML",
             )
             return
 
         if action == "cutter":
-            context.user_data["audio_folder"] = folder
-            context.user_data["audio_input"] = input_path
-            context.user_data["audio_waiting_cut"] = True
+            data["audio_folder"] = folder
+            data["audio_input"] = input_path
+            data["audio_waiting_cut"] = True
 
-            await message.reply_text(
-                "✂️ Start এবং End time পাঠাও।\n\n"
-                "উদাহরণ:\n"
-                "10 30\n\n"
-                "মানে 10 second থেকে 30 second।"
+            await update.message.reply_text(
+                "✂️ Start ও end time পাঠাও।\n\n"
+                "Format:\n"
+                "<code>10 30</code>\n\n"
+                "মানে 10s থেকে 30s পর্যন্ত।",
+                parse_mode="HTML",
             )
             return
 
     except Exception as error:
-        await message.reply_text(
-            "❌ Audio process করা যায়নি.\n\n"
-            f"{error}"
+        await update.message.reply_text(
+            f"❌ Audio process করা যায়নি:\n{error}"
         )
 
-    finally:
-        if not context.user_data.get(
-            "audio_waiting_volume"
-        ) and not context.user_data.get(
-            "audio_waiting_cut"
-        ) and not context.user_data.get(
-            "audio_input"
-        ):
-            cleanup_temp_folder(folder)
-            context.user_data.clear()
+        cleanup_temp_folder(folder)
+        context.user_data.clear()
 
 
 async def handle_audio_format(
@@ -305,35 +400,29 @@ async def handle_audio_format(
     output_format,
 ):
     query = update.callback_query
+    data = context.user_data
 
-    if query:
-        await query.answer()
+    if data.get("audio_action") != "converter":
+        await query.answer(
+            "No active audio conversion.",
+            show_alert=True,
+        )
+        return
 
-    folder = context.user_data.get(
+    folder = data.get(
         "audio_folder"
     )
-    input_path = context.user_data.get(
+
+    input_path = data.get(
         "audio_input"
     )
 
     if not folder or not input_path:
-        target = query.message if query else update.message
-
-        await target.reply_text(
-            "⚠️ আগে একটি audio পাঠাও।"
+        await query.answer(
+            "Audio data পাওয়া যায়নি।",
+            show_alert=True,
         )
-        return
-
-    output_format = (
-        str(output_format)
-        .lower()
-        .replace(".", "")
-    )
-
-    if output_format not in AUDIO_FORMATS:
-        await query.message.reply_text(
-            "❌ Unsupported audio format."
-        )
+        data.clear()
         return
 
     output_path = os.path.join(
@@ -348,59 +437,81 @@ async def handle_audio_format(
             output_format,
         )
 
-        with open(output_path, "rb") as audio:
-            await query.message.reply_document(
-                document=audio,
-                filename=f"converted.{output_format}",
+        await query.answer(
+            "Conversion complete!"
+        )
+
+        with open(
+            output_path,
+            "rb",
+        ) as file:
+            await query.message.reply_audio(
+                audio=file,
+                filename=(
+                    f"converted.{output_format}"
+                ),
                 caption=(
-                    f"✅ Audio → "
-                    f"{output_format.upper()} complete!"
+                    f"🔄 Converted to "
+                    f"{output_format.upper()}"
                 ),
             )
 
     except Exception as error:
+        await query.answer(
+            "Conversion failed.",
+            show_alert=True,
+        )
+
         await query.message.reply_text(
-            "❌ Audio convert করা যায়নি.\n\n"
-            f"{error}"
+            f"❌ Audio convert করা যায়নি:\n{error}"
         )
 
     finally:
         cleanup_temp_folder(folder)
-        context.user_data.clear()
+        data.clear()
 
 
-async def handle_volume_text(update, context):
+async def handle_volume_text(
+    update,
+    context,
+):
     if not update.message:
         return
 
-    if not context.user_data.get(
+    data = context.user_data
+
+    if not data.get(
         "audio_waiting_volume"
     ):
         return
 
-    folder = context.user_data.get(
-        "audio_folder"
-    )
-    input_path = context.user_data.get(
-        "audio_input"
-    )
-
-    if not folder or not input_path:
-        return
-
     try:
-        percentage = float(
+        volume = float(
             update.message.text.strip()
         )
 
-        if percentage <= 0:
+        if volume <= 0 or volume > 300:
             raise ValueError
 
     except ValueError:
         await update.message.reply_text(
-            "⚠️ একটি positive number পাঠাও।\n"
-            "উদাহরণ: 150"
+            "⚠️ 1 থেকে 300-এর মধ্যে percentage দাও।"
         )
+        return
+
+    folder = data.get(
+        "audio_folder"
+    )
+
+    input_path = data.get(
+        "audio_input"
+    )
+
+    if not folder or not input_path:
+        await update.message.reply_text(
+            "❌ Audio data পাওয়া যায়নি।"
+        )
+        data.clear()
         return
 
     output_path = os.path.join(
@@ -412,67 +523,85 @@ async def handle_volume_text(update, context):
         change_volume(
             input_path,
             output_path,
-            percentage,
+            volume,
         )
 
-        with open(output_path, "rb") as audio:
-            await update.message.reply_document(
-                document=audio,
+        with open(
+            output_path,
+            "rb",
+        ) as file:
+            await update.message.reply_audio(
+                audio=file,
                 filename="volume_changed.mp3",
-                caption="✅ Volume changed!",
+                caption=(
+                    f"🔊 Volume set to {volume:g}%"
+                ),
             )
 
     except Exception as error:
         await update.message.reply_text(
-            "❌ Volume change করা যায়নি.\n\n"
-            f"{error}"
+            f"❌ Volume change করা যায়নি:\n{error}"
         )
 
     finally:
         cleanup_temp_folder(folder)
-        context.user_data.clear()
+        data.clear()
 
 
-async def handle_cut_text(update, context):
+async def handle_cut_text(
+    update,
+    context,
+):
     if not update.message:
         return
 
-    if not context.user_data.get(
+    data = context.user_data
+
+    if not data.get(
         "audio_waiting_cut"
     ):
         return
 
-    folder = context.user_data.get(
-        "audio_folder"
-    )
-    input_path = context.user_data.get(
-        "audio_input"
-    )
-
-    if not folder or not input_path:
-        return
-
-    parts = update.message.text.strip().split()
+    parts = (
+        update.message.text or ""
+    ).split()
 
     if len(parts) != 2:
         await update.message.reply_text(
-            "⚠️ Format হবে:\n"
-            "start end\n\n"
-            "উদাহরণ: 10 30"
+            "⚠️ এভাবে পাঠাও: <code>10 30</code>",
+            parse_mode="HTML",
         )
         return
 
     try:
-        start = float(parts[0])
-        end = float(parts[1])
+        start_time = float(parts[0])
+        end_time = float(parts[1])
 
-        if start < 0 or end <= start:
+        if (
+            start_time < 0
+            or end_time <= start_time
+        ):
             raise ValueError
 
     except ValueError:
         await update.message.reply_text(
-            "⚠️ সঠিক start/end time দাও।"
+            "⚠️ Valid start/end time দাও।"
         )
+        return
+
+    folder = data.get(
+        "audio_folder"
+    )
+
+    input_path = data.get(
+        "audio_input"
+    )
+
+    if not folder or not input_path:
+        await update.message.reply_text(
+            "❌ Audio data পাওয়া যায়নি।"
+        )
+        data.clear()
         return
 
     output_path = os.path.join(
@@ -484,27 +613,33 @@ async def handle_cut_text(update, context):
         cut_audio(
             input_path,
             output_path,
-            start,
-            end,
+            start_time,
+            end_time,
         )
 
-        with open(output_path, "rb") as audio:
-            await update.message.reply_document(
-                document=audio,
+        with open(
+            output_path,
+            "rb",
+        ) as file:
+            await update.message.reply_audio(
+                audio=file,
                 filename="cut_audio.mp3",
-                caption="✅ Audio cut complete!",
+                caption=(
+                    f"✂️ Cut: "
+                    f"{start_time:g}s → "
+                    f"{end_time:g}s"
+                ),
             )
 
     except Exception as error:
         await update.message.reply_text(
-            "❌ Audio cut করা যায়নি.\n\n"
-            f"{error}"
+            f"❌ Audio কাটতে সমস্যা হয়েছে:\n{error}"
         )
 
     finally:
         cleanup_temp_folder(folder)
-        context.user_data.clear()
+        data.clear()
 
 
-# Backward-compatible aliases
+# Compatibility alias
 handle_text_to_voice = handle_audio_text
