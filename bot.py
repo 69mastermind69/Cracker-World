@@ -44,6 +44,7 @@ from handlers.pdf import (
     handle_pdf_document,
     handle_protect_password,
     done_pdf,
+    handle_image as handle_pdf_image,
 )
 
 from handlers.image import (
@@ -56,6 +57,18 @@ from handlers.image import (
     handle_image_text,
     handle_convert_format,
     done_image_to_pdf,
+)
+
+from handlers.qr import (
+    start_qr_text,
+    start_qr_url,
+    start_qr_phone,
+    start_qr_email,
+    start_qr_wifi,
+    start_qr_contact,
+    start_qr_to_pdf,
+    handle_qr_text,
+    handle_qr_image,
 )
 
 
@@ -214,7 +227,7 @@ async def button_handler(
         return
 
     # =========================
-    # IMAGE CONVERT FORMAT
+    # IMAGE CONVERT
     # =========================
 
     if data == "convert_jpg":
@@ -246,6 +259,52 @@ async def button_handler(
             update,
             context,
             "bmp",
+        )
+        return
+
+    # =========================
+    # QR TOOLS
+    # =========================
+
+    if data == "qr_text":
+        await start_qr_text(update, context)
+        return
+
+    if data == "qr_url":
+        await start_qr_url(update, context)
+        return
+
+    if data == "qr_phone":
+        await start_qr_phone(update, context)
+        return
+
+    if data == "qr_email":
+        await start_qr_email(update, context)
+        return
+
+    if data == "qr_wifi":
+        await start_qr_wifi(update, context)
+        return
+
+    if data == "qr_contact":
+        await start_qr_contact(update, context)
+        return
+
+    if data == "qr_to_pdf":
+        await start_qr_to_pdf(update, context)
+        return
+
+    # =========================
+    # QR SCAN
+    # =========================
+
+    if data == "qr_scan":
+        await query.edit_message_text(
+            "🔍 Scan QR\n\n"
+            "এই feature-এর জন্য QR image পাঠাও।\n\n"
+            "⚠️ QR decoder module পরবর্তী ধাপে "
+            "connect করা হবে।",
+            reply_markup=qr_menu(),
         )
         return
 
@@ -315,8 +374,14 @@ async def button_handler(
             "• Image → PDF\n\n"
 
             "🔳 QR Tools\n"
-            "• QR Generator\n"
-            "• QR Scanner\n\n"
+            "• Text → QR\n"
+            "• URL → QR\n"
+            "• Wi-Fi → QR\n"
+            "• Contact → QR\n"
+            "• Email → QR\n"
+            "• Phone → QR\n"
+            "• QR → PDF\n"
+            "• QR Scan\n\n"
 
             "🎙️ Audio Tools\n"
             "• Text → Voice\n"
@@ -373,15 +438,6 @@ async def button_handler(
     future_features = {
 
         "pdf_to_image": "🖼️ PDF → Image",
-
-        "qr_text": "📝 Text → QR",
-        "qr_url": "🌐 URL → QR",
-        "qr_wifi": "📶 Wi-Fi → QR",
-        "qr_contact": "👤 Contact → QR",
-        "qr_email": "📧 Email → QR",
-        "qr_phone": "📱 Phone → QR",
-        "qr_scan": "🔍 Scan QR",
-        "qr_to_pdf": "📄 QR → PDF",
 
         "text_to_voice": "🗣️ Text → Voice",
         "voice_changer": "🎭 Voice Changer",
@@ -446,12 +502,23 @@ async def text_handler(
         )
         return
 
-    # Image resize dimensions
+    # Image resize
     if context.user_data.get(
         "image_waiting_dimensions"
     ):
 
         await handle_image_text(
+            update,
+            context,
+        )
+        return
+
+    # QR text-based tools
+    if context.user_data.get(
+        "qr_action"
+    ):
+
+        await handle_qr_text(
             update,
             context,
         )
@@ -465,7 +532,18 @@ async def photo_handler(
     if not update.message:
         return
 
-    # New Image Tools
+    # QR → PDF
+    if context.user_data.get(
+        "qr_action"
+    ) == "qr_to_pdf":
+
+        await handle_qr_image(
+            update,
+            context,
+        )
+        return
+
+    # Image Tools
     if context.user_data.get(
         "image_action"
     ):
@@ -481,7 +559,7 @@ async def photo_handler(
         "pdf_action"
     ) == "image_to_pdf":
 
-        await handle_image(
+        await handle_pdf_image(
             update,
             context,
         )
