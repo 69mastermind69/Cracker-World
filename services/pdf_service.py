@@ -6,67 +6,39 @@ from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
 
 
-def _ensure_output_dir(output_path):
-    folder = os.path.dirname(output_path)
-
-    if folder:
-        os.makedirs(folder, exist_ok=True)
-
-
 def text_to_pdf(
     text,
     output_path,
     title="Document",
 ):
-    """Convert plain text to PDF."""
+    output_dir = os.path.dirname(output_path)
 
-    if not text or not text.strip():
-        raise ValueError("Text is empty.")
-
-    _ensure_output_dir(output_path)
-
-    page_width, page_height = A4
+    if output_dir:
+        os.makedirs(
+            output_dir,
+            exist_ok=True,
+        )
 
     pdf = canvas.Canvas(
         output_path,
         pagesize=A4,
     )
 
+    width, height = A4
+
     pdf.setTitle(title)
 
-    left = 50
-    right = 50
-    top = page_height - 55
-    bottom = 50
+    x = 50
+    y = height - 60
+    line_height = 18
 
-    font_name = "Helvetica"
-    font_size = 11
-    line_height = 16
-
-    max_width = (
-        page_width - left - right
-    )
-
-    x = left
-    y = top
-
-    pdf.setFont(
-        font_name,
-        font_size,
-    )
-
-    for paragraph in text.splitlines():
-
-        if not paragraph.strip():
+    for paragraph in str(text).splitlines():
+        if not paragraph:
             y -= line_height
 
-            if y <= bottom:
+            if y < 50:
                 pdf.showPage()
-                pdf.setFont(
-                    font_name,
-                    font_size,
-                )
-                y = top
+                y = height - 60
 
             continue
 
@@ -75,41 +47,44 @@ def text_to_pdf(
 
         for word in words:
             test_line = (
-                word
-                if not current_line
-                else current_line + " " + word
+                f"{current_line} {word}"
+                if current_line
+                else word
             )
 
             if (
                 pdf.stringWidth(
                     test_line,
-                    font_name,
-                    font_size,
+                    "Helvetica",
+                    11,
                 )
-                <= max_width
+                > width - 100
             ):
-                current_line = test_line
-            else:
-                if current_line:
-                    pdf.drawString(
-                        x,
-                        y,
-                        current_line,
-                    )
+                pdf.setFont(
+                    "Helvetica",
+                    11,
+                )
+                pdf.drawString(
+                    x,
+                    y,
+                    current_line,
+                )
 
-                    y -= line_height
-
-                    if y <= bottom:
-                        pdf.showPage()
-                        pdf.setFont(
-                            font_name,
-                            font_size,
-                        )
-                        y = top
-
+                y -= line_height
                 current_line = word
 
+                if y < 50:
+                    pdf.showPage()
+                    y = height - 60
+
+            else:
+                current_line = test_line
+
         if current_line:
+            pdf.setFont(
+                "Helvetica",
+                11,
+            )
             pdf.drawString(
                 x,
                 y,
@@ -118,13 +93,9 @@ def text_to_pdf(
 
             y -= line_height
 
-            if y <= bottom:
-                pdf.showPage()
-                pdf.setFont(
-                    font_name,
-                    font_size,
-                )
-                y = top
+        if y < 50:
+            pdf.showPage()
+            y = height - 60
 
     pdf.save()
 
@@ -135,47 +106,42 @@ def images_to_pdf(
     image_paths,
     output_path,
 ):
-    """Convert one or multiple images to a PDF."""
-
     if not image_paths:
         raise ValueError(
-            "No images were provided."
+            "No images provided."
         )
 
-    _ensure_output_dir(output_path)
+    output_dir = os.path.dirname(output_path)
+
+    if output_dir:
+        os.makedirs(
+            output_dir,
+            exist_ok=True,
+        )
 
     document = fitz.open()
 
     try:
         for image_path in image_paths:
+            if not os.path.isfile(image_path):
+                continue
 
-            if not os.path.exists(image_path):
-                raise FileNotFoundError(
-                    image_path
-                )
+            image = fitz.Pixmap(image_path)
 
-            image_document = fitz.open(
-                image_path
+            page = document.new_page(
+                width=image.width,
+                height=image.height,
             )
 
-            try:
-                page = document.new_page()
+            page.insert_image(
+                page.rect,
+                filename=image_path,
+            )
 
-                rect = fitz.Rect(
-                    0,
-                    0,
-                    page.rect.width,
-                    page.rect.height,
-                )
-
-                page.insert_image(
-                    rect,
-                    filename=image_path,
-                    keep_proportion=True,
-                )
-
-            finally:
-                image_document.close()
+        if document.page_count == 0:
+            raise ValueError(
+                "No valid images found."
+            )
 
         document.save(output_path)
 
@@ -189,38 +155,40 @@ def merge_pdfs(
     pdf_paths,
     output_path,
 ):
-    """Merge multiple PDF files."""
-
     if not pdf_paths:
         raise ValueError(
-            "No PDF files were provided."
+            "No PDF files provided."
         )
 
-    _ensure_output_dir(output_path)
+    output_dir = os.path.dirname(output_path)
+
+    if output_dir:
+        os.makedirs(
+            output_dir,
+            exist_ok=True,
+        )
 
     writer = PdfWriter()
 
-    try:
-        for pdf_path in pdf_paths:
+    for pdf_path in pdf_paths:
+        if not os.path.isfile(pdf_path):
+            continue
 
-            if not os.path.exists(pdf_path):
-                raise FileNotFoundError(
-                    pdf_path
-                )
+        reader = PdfReader(pdf_path)
 
-            reader = PdfReader(pdf_path)
+        for page in reader.pages:
+            writer.add_page(page)
 
-            for page in reader.pages:
-                writer.add_page(page)
+    if len(writer.pages) == 0:
+        raise ValueError(
+            "No valid PDF pages found."
+        )
 
-        with open(
-            output_path,
-            "wb",
-        ) as output:
-            writer.write(output)
-
-    finally:
-        writer.close()
+    with open(
+        output_path,
+        "wb",
+    ) as file:
+        writer.write(file)
 
     return output_path
 
@@ -229,11 +197,9 @@ def split_pdf(
     input_path,
     output_dir,
 ):
-    """Split a PDF into individual page PDFs."""
-
-    if not os.path.exists(input_path):
+    if not os.path.isfile(input_path):
         raise FileNotFoundError(
-            input_path
+            "PDF file not found."
         )
 
     os.makedirs(
@@ -259,12 +225,12 @@ def split_pdf(
         with open(
             output_path,
             "wb",
-        ) as output:
-            writer.write(output)
+        ) as file:
+            writer.write(file)
 
-        output_files.append(output_path)
-
-        writer.close()
+        output_files.append(
+            output_path
+        )
 
     return output_files
 
@@ -273,32 +239,46 @@ def pdf_to_text(
     input_path,
     output_path=None,
 ):
-    """Extract text from a PDF."""
-
-    if not os.path.exists(input_path):
+    if not os.path.isfile(input_path):
         raise FileNotFoundError(
-            input_path
+            "PDF file not found."
         )
 
-    document = fitz.open(input_path)
+    reader = PdfReader(input_path)
 
-    try:
-        text = "\n".join(
-            page.get_text()
-            for page in document
-        )
-    finally:
-        document.close()
+    text_parts = []
+
+    for page in reader.pages:
+        try:
+            text = page.extract_text() or ""
+        except Exception:
+            text = ""
+
+        text_parts.append(text)
+
+    text = "\n\n".join(
+        text_parts
+    )
 
     if output_path:
-        _ensure_output_dir(output_path)
+        output_dir = os.path.dirname(
+            output_path
+        )
+
+        if output_dir:
+            os.makedirs(
+                output_dir,
+                exist_ok=True,
+            )
 
         with open(
             output_path,
             "w",
             encoding="utf-8",
-        ) as output:
-            output.write(text)
+        ) as file:
+            file.write(text)
+
+        return output_path
 
     return text
 
@@ -308,19 +288,23 @@ def protect_pdf(
     output_path,
     password,
 ):
-    """Password-protect a PDF."""
+    if not os.path.isfile(input_path):
+        raise FileNotFoundError(
+            "PDF file not found."
+        )
 
     if not password:
         raise ValueError(
             "Password cannot be empty."
         )
 
-    if not os.path.exists(input_path):
-        raise FileNotFoundError(
-            input_path
-        )
+    output_dir = os.path.dirname(output_path)
 
-    _ensure_output_dir(output_path)
+    if output_dir:
+        os.makedirs(
+            output_dir,
+            exist_ok=True,
+        )
 
     reader = PdfReader(input_path)
     writer = PdfWriter()
@@ -333,10 +317,8 @@ def protect_pdf(
     with open(
         output_path,
         "wb",
-    ) as output:
-        writer.write(output)
-
-    writer.close()
+    ) as file:
+        writer.write(file)
 
     return output_path
 
@@ -346,11 +328,9 @@ def pdf_to_images(
     output_dir,
     image_format="png",
 ):
-    """Convert every PDF page to an image."""
-
-    if not os.path.exists(input_path):
+    if not os.path.isfile(input_path):
         raise FileNotFoundError(
-            input_path
+            "PDF file not found."
         )
 
     os.makedirs(
@@ -359,19 +339,15 @@ def pdf_to_images(
     )
 
     image_format = (
-        str(image_format)
-        .lower()
-        .replace(".", "")
+        image_format.lower()
     )
 
-    if image_format not in (
+    if image_format not in {
         "png",
         "jpg",
         "jpeg",
-    ):
-        raise ValueError(
-            "Supported formats: PNG, JPG, JPEG."
-        )
+    }:
+        image_format = "png"
 
     document = fitz.open(input_path)
     output_files = []
@@ -385,16 +361,13 @@ def pdf_to_images(
                 matrix=fitz.Matrix(
                     2,
                     2,
-                ),
-                alpha=False,
+                )
             )
 
             extension = (
                 "jpg"
-                if image_format in (
-                    "jpg",
-                    "jpeg",
-                )
+                if image_format
+                in {"jpg", "jpeg"}
                 else "png"
             )
 
