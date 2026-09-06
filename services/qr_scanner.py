@@ -2,32 +2,36 @@ import cv2
 
 
 def scan_qr(image_path):
-    """Decode QR code(s) from an image."""
+    """
+    Scan one or multiple QR codes from an image.
 
+    Returns:
+        list[str]: Decoded QR contents.
+    """
     image = cv2.imread(image_path)
 
     if image is None:
         raise ValueError("Image could not be opened.")
 
     detector = cv2.QRCodeDetector()
-
     results = []
 
-    # Try multi-QR detection first
+    # Try detecting multiple QR codes first.
     try:
-        success, decoded_info, points, _ = (
-            detector.detectAndDecodeMulti(image)
-        )
+        success, decoded_info, points, _ = detector.detectAndDecodeMulti(image)
 
         if success and decoded_info:
             for data in decoded_info:
                 if data and data.strip():
-                    results.append(data.strip())
+                    value = data.strip()
+
+                    if value not in results:
+                        results.append(value)
 
     except Exception:
         pass
 
-    # Fallback to single QR detection
+    # Fallback: detect a single QR code.
     if not results:
         try:
             data, points, _ = detector.detectAndDecode(image)
