@@ -2,27 +2,14 @@ import os
 import qrcode
 
 
-# ============================================================
-# BASIC QR GENERATOR
-# ============================================================
-
-def generate_qr(
-    data,
-    output_path,
-    box_size=10,
-    border=4,
-):
-    """
-    Generate a standard QR code PNG.
-    """
-
+def generate_qr(data, output_path, box_size=10, border=4):
     if not data:
-        raise ValueError("QR data is empty.")
+        raise ValueError("QR data cannot be empty.")
 
-    os.makedirs(
-        os.path.dirname(output_path) or ".",
-        exist_ok=True,
-    )
+    output_dir = os.path.dirname(output_path)
+
+    if output_dir:
+        os.makedirs(output_dir, exist_ok=True)
 
     qr = qrcode.QRCode(
         version=None,
@@ -44,10 +31,6 @@ def generate_qr(
     return output_path
 
 
-# ============================================================
-# WIFI → QR
-# ============================================================
-
 def generate_qr_wifi(
     ssid,
     password,
@@ -55,37 +38,15 @@ def generate_qr_wifi(
     output_path="wifi_qr.png",
     hidden=False,
 ):
-    """
-    Generate Wi-Fi QR code.
-
-    security:
-        WPA
-        WEP
-        nopass
-    """
-
     if not ssid:
-        raise ValueError("SSID is required.")
+        raise ValueError("Wi-Fi SSID cannot be empty.")
 
-    security = str(
-        security or "WPA"
-    ).strip()
+    security = (security or "WPA").upper()
 
-    if security.lower() == "none":
-        security = "nopass"
-
-    if security.lower() == "open":
-        security = "nopass"
-
-    if security.upper() not in (
-        "WPA",
-        "WEP",
-        "NOPASS",
-    ):
+    if security not in {"WPA", "WEP", "nopass"}:
         security = "WPA"
 
-    # Escape special Wi-Fi QR characters
-    def escape_wifi(value):
+    def escape(value):
         return (
             str(value)
             .replace("\\", "\\\\")
@@ -95,22 +56,18 @@ def generate_qr_wifi(
             .replace('"', '\\"')
         )
 
-    wifi_data = (
+    data = (
         f'WIFI:T:{security};'
-        f'S:{escape_wifi(ssid)};'
-        f'P:{escape_wifi(password or "")};'
+        f'S:{escape(ssid)};'
+        f'P:{escape(password or "")};'
         f'H:{"true" if hidden else "false"};;'
     )
 
     return generate_qr(
-        wifi_data,
+        data,
         output_path,
     )
 
-
-# ============================================================
-# CONTACT / VCARD → QR
-# ============================================================
 
 def generate_qr_contact(
     name,
@@ -118,21 +75,10 @@ def generate_qr_contact(
     email="",
     output_path="contact_qr.png",
 ):
-    """
-    Generate a vCard QR code.
-    """
-
     if not name:
-        raise ValueError(
-            "Contact name is required."
-        )
+        raise ValueError("Contact name cannot be empty.")
 
-    if not phone:
-        raise ValueError(
-            "Phone number is required."
-        )
-
-    vcard = (
+    data = (
         "BEGIN:VCARD\n"
         "VERSION:3.0\n"
         f"FN:{name}\n"
@@ -140,19 +86,15 @@ def generate_qr_contact(
     )
 
     if email:
-        vcard += f"EMAIL:{email}\n"
+        data += f"EMAIL:{email}\n"
 
-    vcard += "END:VCARD"
+    data += "END:VCARD"
 
     return generate_qr(
-        vcard,
+        data,
         output_path,
     )
 
-
-# ============================================================
-# EMAIL → QR
-# ============================================================
 
 def generate_qr_email(
     email,
@@ -160,81 +102,51 @@ def generate_qr_email(
     message="",
     output_path="email_qr.png",
 ):
-    """
-    Generate a mailto QR code.
-    """
-
     if not email:
-        raise ValueError(
-            "Email address is required."
-        )
-
-    from urllib.parse import quote
-
-    query = []
-
-    if subject:
-        query.append(
-            "subject=" + quote(str(subject))
-        )
-
-    if message:
-        query.append(
-            "body=" + quote(str(message))
-        )
+        raise ValueError("Email address cannot be empty.")
 
     data = f"mailto:{email}"
 
-    if query:
-        data += "?" + "&".join(query)
+    params = []
+
+    if subject:
+        params.append(
+            f"subject={subject}"
+        )
+
+    if message:
+        params.append(
+            f"body={message}"
+        )
+
+    if params:
+        data += "?" + "&".join(params)
 
     return generate_qr(
         data,
         output_path,
     )
 
-
-# ============================================================
-# PHONE → QR
-# ============================================================
 
 def generate_qr_phone(
     phone,
     output_path="phone_qr.png",
 ):
-    """
-    Generate a telephone QR code.
-    """
-
     if not phone:
-        raise ValueError(
-            "Phone number is required."
-        )
-
-    data = f"tel:{phone}"
+        raise ValueError("Phone number cannot be empty.")
 
     return generate_qr(
-        data,
+        f"tel:{phone}",
         output_path,
     )
 
-
-# ============================================================
-# URL → QR
-# ============================================================
 
 def generate_qr_url(
     url,
     output_path="url_qr.png",
 ):
-    """
-    Generate a URL QR code.
-    """
-
     if not url:
-        raise ValueError(
-            "URL is required."
-        )
+        raise ValueError("URL cannot be empty.")
 
     return generate_qr(
         url,
@@ -242,22 +154,12 @@ def generate_qr_url(
     )
 
 
-# ============================================================
-# TEXT → QR
-# ============================================================
-
 def generate_qr_text(
     text,
     output_path="text_qr.png",
 ):
-    """
-    Generate a text QR code.
-    """
-
     if not text:
-        raise ValueError(
-            "Text is required."
-        )
+        raise ValueError("Text cannot be empty.")
 
     return generate_qr(
         text,
