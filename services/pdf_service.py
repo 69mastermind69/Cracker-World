@@ -1,38 +1,84 @@
 import os
 
+from pypdf import (
+    PdfReader,
+    PdfWriter,
+)
+
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
-from pypdf import PdfReader, PdfWriter
-from PIL import Image
 
-import fitz
+import fitz  # PyMuPDF
 
+
+# ============================================================
+# TEXT → PDF
+# ============================================================
 
 def text_to_pdf(
     text,
     output_path,
-    title="Text Document",
+    title="Document",
 ):
-    c = canvas.Canvas(
+    """
+    Convert plain text into a PDF.
+    """
+
+    if not text or not text.strip():
+        raise ValueError("Text is empty.")
+
+    os.makedirs(
+        os.path.dirname(output_path) or ".",
+        exist_ok=True,
+    )
+
+    page_width, page_height = A4
+
+    pdf = canvas.Canvas(
         output_path,
         pagesize=A4,
     )
 
-    width, height = A4
-    margin = 50
-    line_height = 16
-    y = height - margin
+    pdf.setTitle(title)
 
-    c.setTitle(title)
+    left_margin = 50
+    right_margin = 50
+    top_margin = page_height - 55
+    bottom_margin = 50
+
+    font_name = "Helvetica"
+    font_size = 11
+    line_height = 16
+
+    pdf.setFont(
+        font_name,
+        font_size,
+    )
+
+    x = left_margin
+    y = top_margin
+
+    max_width = (
+        page_width
+        - left_margin
+        - right_margin
+    )
 
     for paragraph in text.splitlines():
 
+        # Empty line
         if not paragraph.strip():
             y -= line_height
 
-            if y < margin:
-                c.showPage()
-                y = height - margin
+            if y <= bottom_margin:
+                pdf.showPage()
+
+                pdf.setFont(
+                    font_name,
+                    font_size,
+                )
+
+                y = top_margin
 
             continue
 
@@ -47,111 +93,168 @@ def text_to_pdf(
                 else current_line + " " + word
             )
 
-            if c.stringWidth(
-                test_line,
-                "Helvetica",
-                11,
-            ) <= width - 2 * margin:
-
-                current_line = test_line
-
-            else:
-
-                c.setFont(
-                    "Helvetica",
-                    11,
+            if (
+                pdf.stringWidth(
+                    test_line,
+                    font_name,
+                    font_size,
                 )
-
-                c.drawString(
-                    margin,
+                <= max_width
+            ):
+                current_line = test_line
+            else:
+                pdf.drawString(
+                    x,
                     y,
                     current_line,
                 )
 
                 y -= line_height
-
-                if y < margin:
-                    c.showPage()
-                    y = height - margin
-
                 current_line = word
 
+                if y <= bottom_margin:
+                    pdf.showPage()
+
+                    pdf.setFont(
+                        font_name,
+                        font_size,
+                    )
+
+                    y = top_margin
+
         if current_line:
-
-            c.setFont(
-                "Helvetica",
-                11,
-            )
-
-            c.drawString(
-                margin,
+            pdf.drawString(
+                x,
                 y,
                 current_line,
             )
 
             y -= line_height
 
-        if y < margin:
-            c.showPage()
-            y = height - margin
+        if y <= bottom_margin:
+            pdf.showPage()
 
-    c.save()
+            pdf.setFont(
+                font_name,
+                font_size,
+            )
+
+            y = top_margin
+
+    pdf.save()
 
     return output_path
 
+
+# ============================================================
+# IMAGES → PDF
+# ============================================================
 
 def images_to_pdf(
     image_paths,
     output_path,
 ):
+    """
+    Convert one or more images into a single PDF.
+    """
+
     if not image_paths:
         raise ValueError(
             "No images provided."
         )
 
-    processed_images = []
+    valid_images = [
+        path
+        for path in image_paths
+        if os.path.isfile(path)
+    ]
 
-    try:
+    if not valid_images:
+        raise ValueError(
+            "No valid image files found."
+        )
 
-        for image_path in image_paths:
+    os.makedirs(
+        os.path.dirname(output_path) or ".",
+        exist_ok=True,
+    )
 
-            img = Image.open(
-                image_path
+    pdf = canvas.Canvas(
+        output_path,
+        pagesize=A4,
+    )
+
+    page_width, page_height = A4
+
+    margin = 30
+
+    for image_path in valid_images:
+
+        try:
+            image = fitz.Pixmap(image_path)
+
+            width = image.width
+            height = image.height
+
+            if width <= 0 or height <= 0:
+                continue
+
+            available_width = (
+                page_width - 2 * margin
             )
 
-            if img.mode != "RGB":
-                img = img.convert("RGB")
+            available_height = (
+                page_height - 2 * margin
+            )
 
-            processed_images.append(img)
+            scale = min(
+                available_width / width,
+                available_height / height,
+            )
 
-        first_image = processed_images[0]
-        remaining_images = (
-            processed_images[1:]
-        )
+            draw_width = width * scale
+            draw_height = height * scale
 
-        first_image.save(
-            output_path,
-            "PDF",
-            resolution=100.0,
-            save_all=True,
-            append_images=remaining_images,
-        )
+            x = (
+                page_width - draw_width
+            ) / 2
 
-    finally:
+            y = (
+                page_height - draw_height
+            ) / 2
 
-        for img in processed_images:
-            try:
-                img.close()
-            except Exception:
-                pass
+            pdf.drawImage(
+                image_path,
+                x,
+                y,
+                width=draw_width,
+                height=draw_height,
+                preserveAspectRatio=True,
+                anchor="c",
+            )
+
+            pdf.showPage()
+
+        except Exception:
+            continue
+
+    pdf.save()
 
     return output_path
 
+
+# ============================================================
+# MERGE PDF
+# ============================================================
 
 def merge_pdfs(
     pdf_paths,
     output_path,
 ):
+    """
+    Merge multiple PDF files.
+    """
+
     if not pdf_paths:
         raise ValueError(
             "No PDF files provided."
@@ -159,39 +262,62 @@ def merge_pdfs(
 
     writer = PdfWriter()
 
+    valid_count = 0
+
     for pdf_path in pdf_paths:
 
-        reader = PdfReader(
-            pdf_path
-        )
+        if not os.path.isfile(pdf_path):
+            continue
+
+        reader = PdfReader(pdf_path)
 
         for page in reader.pages:
             writer.add_page(page)
+
+        valid_count += 1
+
+    if valid_count == 0:
+        raise ValueError(
+            "No valid PDF files found."
+        )
+
+    os.makedirs(
+        os.path.dirname(output_path) or ".",
+        exist_ok=True,
+    )
 
     with open(
         output_path,
         "wb",
     ) as output_file:
-
-        writer.write(
-            output_file
-        )
+        writer.write(output_file)
 
     return output_path
 
 
+# ============================================================
+# SPLIT PDF
+# ============================================================
+
 def split_pdf(
-    pdf_path,
+    input_path,
     output_dir,
 ):
+    """
+    Split PDF into individual page PDFs.
+    """
+
+    if not os.path.isfile(input_path):
+        raise FileNotFoundError(
+            "PDF file not found."
+        )
+
     os.makedirs(
         output_dir,
         exist_ok=True,
     )
 
-    reader = PdfReader(
-        pdf_path
-    )
+    reader = PdfReader(input_path)
 
     output_files = []
 
@@ -199,7 +325,6 @@ def split_pdf(
         reader.pages,
         start=1,
     ):
-
         writer = PdfWriter()
 
         writer.add_page(page)
@@ -213,10 +338,7 @@ def split_pdf(
             output_path,
             "wb",
         ) as output_file:
-
-            writer.write(
-                output_file
-            )
+            writer.write(output_file)
 
         output_files.append(
             output_path
@@ -225,74 +347,101 @@ def split_pdf(
     return output_files
 
 
+# ============================================================
+# PDF → TEXT
+# ============================================================
+
 def pdf_to_text(
-    pdf_path,
+    input_path,
 ):
-    reader = PdfReader(
-        pdf_path
-    )
+    """
+    Extract text from PDF.
+    """
 
-    pages = []
-
-    for page in reader.pages:
-
-        text = (
-            page.extract_text()
-            or ""
+    if not os.path.isfile(input_path):
+        raise FileNotFoundError(
+            "PDF file not found."
         )
 
-        pages.append(text)
+    document = fitz.open(input_path)
 
-    return "\n\n".join(pages)
+    try:
+        pages = []
 
+        for page in document:
+            text = page.get_text()
+
+            if text:
+                pages.append(text)
+
+        return "\n\n".join(pages)
+
+    finally:
+        document.close()
+
+
+# ============================================================
+# PROTECT PDF
+# ============================================================
 
 def protect_pdf(
-    pdf_path,
+    input_path,
     output_path,
     password,
 ):
+    """
+    Password-protect a PDF.
+    """
+
+    if not os.path.isfile(input_path):
+        raise FileNotFoundError(
+            "PDF file not found."
+        )
+
     if not password:
         raise ValueError(
             "Password cannot be empty."
         )
 
-    reader = PdfReader(
-        pdf_path
-    )
-
+    reader = PdfReader(input_path)
     writer = PdfWriter()
 
     for page in reader.pages:
         writer.add_page(page)
 
     writer.encrypt(
-        password
+        password,
+        use_128bit=True,
+    )
+
+    os.makedirs(
+        os.path.dirname(output_path) or ".",
+        exist_ok=True,
     )
 
     with open(
         output_path,
         "wb",
     ) as output_file:
-
-        writer.write(
-            output_file
-        )
+        writer.write(output_file)
 
     return output_path
 
 
+# ============================================================
+# PDF → IMAGES
+# ============================================================
+
 def pdf_to_images(
-    pdf_path,
+    input_path,
     output_dir,
     dpi=150,
 ):
     """
-    Convert every PDF page into a PNG image.
+    Convert every PDF page into PNG.
     """
 
-    if not os.path.isfile(
-        pdf_path
-    ):
+    if not os.path.isfile(input_path):
         raise FileNotFoundError(
             "PDF file not found."
         )
@@ -302,29 +451,22 @@ def pdf_to_images(
         exist_ok=True,
     )
 
-    pdf_document = fitz.open(
-        pdf_path
-    )
+    document = fitz.open(input_path)
 
     output_files = []
 
     try:
-
-        scale = dpi / 72.0
+        scale = dpi / 72
 
         matrix = fitz.Matrix(
             scale,
             scale,
         )
 
-        for page_number in range(
-            len(pdf_document)
+        for index, page in enumerate(
+            document,
+            start=1,
         ):
-
-            page = pdf_document[
-                page_number
-            ]
-
             pixmap = page.get_pixmap(
                 matrix=matrix,
                 alpha=False,
@@ -332,39 +474,16 @@ def pdf_to_images(
 
             output_path = os.path.join(
                 output_dir,
-                f"page_{page_number + 1}.png",
+                f"page_{index}.png",
             )
 
-            pixmap.save(
-                output_path
-            )
+            pixmap.save(output_path)
 
             output_files.append(
                 output_path
             )
 
     finally:
-
-        pdf_document.close()
+        document.close()
 
     return output_files
-
-
-def get_pdf_info(
-    pdf_path,
-):
-    reader = PdfReader(
-        pdf_path
-    )
-
-    return {
-        "pages": len(
-            reader.pages
-        ),
-        "encrypted": (
-            reader.is_encrypted
-        ),
-        "size_bytes": os.path.getsize(
-            pdf_path
-        ),
-    }
