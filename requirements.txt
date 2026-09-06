@@ -2,4 +2,7 @@ python-telegram-bot>=21,<23
 reportlab>=4,<5
 pypdf>=5,<7
 Pillow>=10,<13
+qrcode>=8,<9
 opencv-python-headless>=4.10,<5
+pydub>=0.25,<1
+pyttsx3>=2.90,<3
