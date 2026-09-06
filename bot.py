@@ -11,44 +11,61 @@ from telegram.ext import (
     filters,
 )
 
-from config import BOT_TOKEN, ADMIN_ID, BOT_NAME
+from config import (
+    BOT_TOKEN,
+    ADMIN_ID,
+    DEVELOPER_NAME,
+    DEVELOPER_USERNAME,
+    BOT_NAME,
+    MAINTENANCE_MODE,
+)
 
-# =========================
-# PDF HANDLERS
-# =========================
+from utils.keyboards import (
+    main_menu,
+    pdf_menu,
+    image_menu,
+    qr_menu,
+    audio_menu,
+    file_menu,
+    developer_menu,
+    help_menu,
+    admin_menu,
+)
+
+# ---------------- PDF ----------------
+
 from handlers.pdf import (
     start_text_to_pdf,
     start_image_to_pdf as start_pdf_image_to_pdf,
+    start_pdf_to_image,
     start_merge_pdf,
     start_split_pdf,
-    start_pdf_to_image,
     start_pdf_to_text,
     start_protect_pdf,
     handle_pdf_text,
     handle_pdf_document,
-    handle_pdf_to_image,
+    handle_image_to_pdf as handle_pdf_image_to_pdf,
     handle_protect_password,
     done_pdf,
+    done_merge_pdf,
 )
 
-# =========================
-# IMAGE HANDLERS
-# =========================
+# ---------------- IMAGE ----------------
+
 from handlers.image import (
-    start_resize_image,
-    start_compress_image,
-    start_convert_image,
+    start_resize,
+    start_compress,
+    start_convert,
+    start_image_to_pdf,
     start_image_info,
-    start_image_to_pdf as start_image_tool_to_pdf,
     handle_image,
     handle_image_text,
     handle_convert_format,
     done_image_to_pdf,
 )
 
-# =========================
-# QR HANDLERS
-# =========================
+# ---------------- QR ----------------
+
 from handlers.qr import (
     start_qr_text,
     start_qr_url,
@@ -62,9 +79,8 @@ from handlers.qr import (
     handle_qr_image,
 )
 
-# =========================
-# AUDIO HANDLERS
-# =========================
+# ---------------- AUDIO ----------------
+
 from handlers.audio import (
     start_text_to_voice,
     start_voice_changer,
@@ -72,39 +88,25 @@ from handlers.audio import (
     start_audio_converter,
     start_volume_changer,
     start_audio_info,
-    handle_audio_text,
     handle_audio_file,
+    handle_audio_text,
     handle_audio_format,
+    handle_volume_text,
+    handle_cut_text,
 )
 
-# =========================
-# KEYBOARDS
-# =========================
-from utils.keyboards import (
-    main_menu,
-    pdf_menu,
-    image_menu,
-    qr_menu,
-    audio_menu,
-    file_menu,
-    developer_menu,
-    help_menu,
-    admin_menu,
-)
+# ---------------- FILE ----------------
 
-# =========================
-# FILE SERVICE
-# =========================
 from services.file_service import (
-    get_file_info,
     create_zip,
     extract_zip,
 )
 
+from utils.files import (
+    create_temp_dir,
+    cleanup_temp_folder,
+)
 
-# ============================================================
-# LOGGING
-# ============================================================
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -114,69 +116,97 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-# ============================================================
-# TEMP USER STATE
-# ============================================================
-
-user_states = {}
-
-
-def set_state(user_id: int, state: str):
-    user_states[user_id] = state
-
-
-def get_state(user_id: int):
-    return user_states.get(user_id)
-
-
-def clear_state(user_id: int):
-    user_states.pop(user_id, None)
-
-
-# ============================================================
+# =========================================================
 # START
-# ============================================================
+# =========================================================
 
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def start(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+):
     if not update.message:
         return
 
-    user_id = update.effective_user.id
-
-    clear_state(user_id)
+    context.user_data.clear()
 
     await update.message.reply_text(
-        f"🤖 *{BOT_NAME}*\n\n"
-        "Welcome!\n"
-        "Choose a tool from the menu below.",
+        f"🤖 <b>{BOT_NAME}</b>\n\n"
+        "Welcome! 👋\n\n"
+        "নিচের menu থেকে একটি tool select করো 👇",
+        parse_mode="HTML",
         reply_markup=main_menu(),
-        parse_mode="Markdown",
     )
 
 
-# ============================================================
-# HELP
-# ============================================================
+# =========================================================
+# MAINTENANCE
+# =========================================================
 
-async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.message:
+async def maintenance_check(
+    update: Update,
+) -> bool:
+    if not MAINTENANCE_MODE:
+        return False
+
+    user = update.effective_user
+
+    if user and user.id == ADMIN_ID:
+        return False
+
+    text = (
+        "🔧 <b>Maintenance Mode</b>\n\n"
+        "Bot বর্তমানে maintenance mode-এ আছে।"
+    )
+
+    if update.callback_query:
+        await update.callback_query.answer()
+
+        await update.callback_query.edit_message_text(
+            text,
+            parse_mode="HTML",
+        )
+
+    elif update.message:
         await update.message.reply_text(
-            "ℹ️ *Help*\n\n"
-            "Choose a category from the main menu and follow the instructions.\n\n"
-            "📄 PDF Tools\n"
-            "🖼️ Image Tools\n"
-            "🔳 QR Tools\n"
-            "🎙️ Audio Tools\n"
-            "🛠️ File Tools\n\n"
-            "If something fails, try sending the file again.",
-            reply_markup=help_menu(),
-            parse_mode="Markdown",
+            text,
+            parse_mode="HTML",
+        )
+
+    return True
+
+
+# =========================================================
+# HOME
+# =========================================================
+
+async def show_home(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+):
+    context.user_data.clear()
+
+    if update.callback_query:
+        await update.callback_query.answer()
+
+        await update.callback_query.edit_message_text(
+            f"🤖 <b>{BOT_NAME}</b>\n\n"
+            "Choose a tool 👇",
+            parse_mode="HTML",
+            reply_markup=main_menu(),
+        )
+
+    elif update.message:
+        await update.message.reply_text(
+            f"🤖 <b>{BOT_NAME}</b>\n\n"
+            "Choose a tool 👇",
+            parse_mode="HTML",
+            reply_markup=main_menu(),
         )
 
 
-# ============================================================
-# MAIN CALLBACK ROUTER
-# ============================================================
+# =========================================================
+# BUTTON HANDLER
+# =========================================================
 
 async def button_handler(
     update: Update,
@@ -187,600 +217,802 @@ async def button_handler(
     if not query:
         return
 
-    await query.answer()
+    data = query.data or ""
 
-    data = query.data
-    user_id = query.from_user.id
-
-    # ========================================================
-    # MAIN MENUS
-    # ========================================================
-
-    if data in ("main_menu", "home"):
-        clear_state(user_id)
-
-        await query.edit_message_text(
-            "🤖 *Main Menu*\n\nChoose a tool:",
-            reply_markup=main_menu(),
-            parse_mode="Markdown",
-        )
+    if await maintenance_check(update):
         return
 
-    if data in ("pdf_menu", "pdf_tools"):
-        clear_state(user_id)
+    # -----------------------------------------------------
+    # HOME
+    # -----------------------------------------------------
+
+    if data == "home":
+        await show_home(update, context)
+        return
+
+    # -----------------------------------------------------
+    # PDF MENU
+    # -----------------------------------------------------
+
+    if data == "pdf_menu":
+        await query.answer()
 
         await query.edit_message_text(
-            "📄 *PDF Tools*\n\nChoose an option:",
+            "📄 <b>PDF Tools</b>\n\n"
+            "একটি option select করো 👇",
+            parse_mode="HTML",
             reply_markup=pdf_menu(),
-            parse_mode="Markdown",
         )
         return
-
-    if data in ("image_menu", "image_tools"):
-        clear_state(user_id)
-
-        await query.edit_message_text(
-            "🖼️ *Image Tools*\n\nChoose an option:",
-            reply_markup=image_menu(),
-            parse_mode="Markdown",
-        )
-        return
-
-    if data in ("qr_menu", "qr_tools"):
-        clear_state(user_id)
-
-        await query.edit_message_text(
-            "🔳 *QR Tools*\n\nChoose an option:",
-            reply_markup=qr_menu(),
-            parse_mode="Markdown",
-        )
-        return
-
-    if data in ("audio_menu", "audio_tools"):
-        clear_state(user_id)
-
-        await query.edit_message_text(
-            "🎙️ *Audio Tools*\n\nChoose an option:",
-            reply_markup=audio_menu(),
-            parse_mode="Markdown",
-        )
-        return
-
-    if data in ("file_menu", "file_tools"):
-        clear_state(user_id)
-
-        await query.edit_message_text(
-            "🛠️ *File Tools*\n\nChoose an option:",
-            reply_markup=file_menu(),
-            parse_mode="Markdown",
-        )
-        return
-
-    if data in ("developer", "developer_menu"):
-        clear_state(user_id)
-
-        await query.edit_message_text(
-            "👨‍💻 *Developer*\n\n"
-            "Name: MASTERMIND\n"
-            "Telegram: @Do_x_Die",
-            reply_markup=developer_menu(),
-            parse_mode="Markdown",
-        )
-        return
-
-    if data in ("help", "help_menu"):
-        clear_state(user_id)
-
-        await query.edit_message_text(
-            "ℹ️ *Help*\n\n"
-            "Select a tool from the main menu and follow the instructions.",
-            reply_markup=help_menu(),
-            parse_mode="Markdown",
-        )
-        return
-
-    # ========================================================
-    # PDF TOOLS
-    # ========================================================
 
     if data == "text_to_pdf":
-        set_state(user_id, "pdf_text")
-        await start_text_to_pdf(update, context)
+        await start_text_to_pdf(
+            update,
+            context,
+        )
         return
 
     if data == "pdf_image_to_pdf":
-        set_state(user_id, "pdf_image_to_pdf")
-        await start_pdf_image_to_pdf(update, context)
-        return
-
-    if data == "merge_pdf":
-        set_state(user_id, "merge_pdf")
-        await start_merge_pdf(update, context)
-        return
-
-    if data == "split_pdf":
-        set_state(user_id, "split_pdf")
-        await start_split_pdf(update, context)
+        await start_pdf_image_to_pdf(
+            update,
+            context,
+        )
         return
 
     if data == "pdf_to_image":
-        set_state(user_id, "pdf_to_image")
-        await start_pdf_to_image(update, context)
+        await start_pdf_to_image(
+            update,
+            context,
+        )
+        return
+
+    if data == "merge_pdf":
+        await start_merge_pdf(
+            update,
+            context,
+        )
+        return
+
+    if data == "split_pdf":
+        await start_split_pdf(
+            update,
+            context,
+        )
         return
 
     if data == "pdf_to_text":
-        set_state(user_id, "pdf_to_text")
-        await start_pdf_to_text(update, context)
+        await start_pdf_to_text(
+            update,
+            context,
+        )
         return
 
     if data == "protect_pdf":
-        set_state(user_id, "protect_pdf")
-        await start_protect_pdf(update, context)
+        await start_protect_pdf(
+            update,
+            context,
+        )
         return
 
-    # ========================================================
-    # IMAGE TOOLS
-    # ========================================================
+    # -----------------------------------------------------
+    # IMAGE MENU
+    # -----------------------------------------------------
 
-    if data in ("resize_image", "resize"):
-        set_state(user_id, "resize_image")
-        await start_resize_image(update, context)
+    if data == "image_menu":
+        await query.answer()
+
+        await query.edit_message_text(
+            "🖼️ <b>Image Tools</b>\n\n"
+            "একটি option select করো 👇",
+            parse_mode="HTML",
+            reply_markup=image_menu(),
+        )
         return
 
-    if data in ("compress_image", "compress"):
-        set_state(user_id, "compress_image")
-        await start_compress_image(update, context)
+    if data == "resize_image":
+        await start_resize(
+            update,
+            context,
+        )
         return
 
-    if data in ("convert_image", "convert"):
-        set_state(user_id, "convert_image")
-        await start_convert_image(update, context)
+    if data == "compress_image":
+        await start_compress(
+            update,
+            context,
+        )
+        return
+
+    if data == "convert_image":
+        await start_convert(
+            update,
+            context,
+        )
         return
 
     if data == "image_to_pdf":
-        set_state(user_id, "image_to_pdf")
-        await start_image_tool_to_pdf(update, context)
+        await start_image_to_pdf(
+            update,
+            context,
+        )
         return
 
-    if data in ("image_info", "info_image"):
-        set_state(user_id, "image_info")
-        await start_image_info(update, context)
+    if data == "image_info":
+        await start_image_info(
+            update,
+            context,
+        )
         return
 
-    # Image conversion format buttons
     if data.startswith("convert_"):
-        await handle_convert_format(update, context)
-        return
+        fmt = data.replace(
+            "convert_",
+            "",
+            1,
+        )
 
-    # ========================================================
-    # QR TOOLS
-    # ========================================================
-
-    if data in ("qr_text", "text_qr"):
-        set_state(user_id, "qr_text")
-        await start_qr_text(update, context)
-        return
-
-    if data in ("qr_url", "url_qr"):
-        set_state(user_id, "qr_url")
-        await start_qr_url(update, context)
-        return
-
-    if data in ("qr_wifi", "wifi_qr"):
-        set_state(user_id, "qr_wifi")
-        await start_qr_wifi(update, context)
-        return
-
-    if data in ("qr_contact", "contact_qr"):
-        set_state(user_id, "qr_contact")
-        await start_qr_contact(update, context)
-        return
-
-    if data in ("qr_email", "email_qr"):
-        set_state(user_id, "qr_email")
-        await start_qr_email(update, context)
-        return
-
-    if data in ("qr_phone", "phone_qr"):
-        set_state(user_id, "qr_phone")
-        await start_qr_phone(update, context)
-        return
-
-    if data in ("qr_scan", "scan_qr"):
-        set_state(user_id, "qr_scan")
-        await start_qr_scan(update, context)
-        return
-
-    if data in ("qr_to_pdf", "qr_pdf"):
-        set_state(user_id, "qr_to_pdf")
-        await start_qr_to_pdf(update, context)
-        return
-
-    # ========================================================
-    # AUDIO TOOLS
-    # ========================================================
-
-    if data in ("text_to_voice", "text_to_audio"):
-        set_state(user_id, "text_to_voice")
-        await start_text_to_voice(update, context)
-        return
-
-    if data in ("voice_changer", "change_voice"):
-        set_state(user_id, "voice_changer")
-        await start_voice_changer(update, context)
-        return
-
-    if data in ("audio_cutter", "cut_audio"):
-        set_state(user_id, "audio_cutter")
-        await start_audio_cutter(update, context)
-        return
-
-    if data in ("audio_converter", "convert_audio"):
-        set_state(user_id, "audio_converter")
-        await start_audio_converter(update, context)
-        return
-
-    if data in ("volume_changer", "change_volume"):
-        set_state(user_id, "volume_changer")
-        await start_volume_changer(update, context)
-        return
-
-    if data in ("audio_info", "info_audio"):
-        set_state(user_id, "audio_info")
-        await start_audio_info(update, context)
-        return
-
-    # Audio output format buttons
-    if data.startswith("audio_format_"):
-        await handle_audio_format(update, context)
-        return
-
-    # ========================================================
-    # FILE TOOLS
-    # ========================================================
-
-    if data in ("create_zip", "zip_create"):
-        set_state(user_id, "create_zip")
-
-        await query.edit_message_text(
-            "🗜️ *Create ZIP*\n\n"
-            "Send the files you want to put into a ZIP.\n"
-            "When finished, send /done.",
-            parse_mode="Markdown",
+        await handle_convert_format(
+            update,
+            context,
+            fmt,
         )
         return
 
-    if data in ("extract_zip", "zip_extract"):
-        set_state(user_id, "extract_zip")
+    # -----------------------------------------------------
+    # QR MENU
+    # -----------------------------------------------------
+
+    if data == "qr_menu":
+        await query.answer()
 
         await query.edit_message_text(
-            "📦 *Extract ZIP*\n\n"
-            "Send a ZIP file.",
-            parse_mode="Markdown",
+            "🔳 <b>QR Tools</b>\n\n"
+            "একটি option select করো 👇",
+            parse_mode="HTML",
+            reply_markup=qr_menu(),
         )
         return
 
-    if data in ("file_converter", "convert_file"):
-        set_state(user_id, "file_converter")
-
-        await query.edit_message_text(
-            "🔄 *File Converter*\n\n"
-            "Send the file you want to convert.",
-            parse_mode="Markdown",
+    if data == "qr_text":
+        await start_qr_text(
+            update,
+            context,
         )
         return
 
-    if data in ("file_info", "info_file"):
-        set_state(user_id, "file_info")
-
-        await query.edit_message_text(
-            "ℹ️ *File Info*\n\n"
-            "Send a file to inspect it.",
-            parse_mode="Markdown",
+    if data == "qr_url":
+        await start_qr_url(
+            update,
+            context,
         )
         return
 
-    # ========================================================
+    if data == "qr_wifi":
+        await start_qr_wifi(
+            update,
+            context,
+        )
+        return
+
+    if data == "qr_contact":
+        await start_qr_contact(
+            update,
+            context,
+        )
+        return
+
+    if data == "qr_email":
+        await start_qr_email(
+            update,
+            context,
+        )
+        return
+
+    if data == "qr_phone":
+        await start_qr_phone(
+            update,
+            context,
+        )
+        return
+
+    if data == "qr_scan":
+        await start_qr_scan(
+            update,
+            context,
+        )
+        return
+
+    if data == "qr_to_pdf":
+        await start_qr_to_pdf(
+            update,
+            context,
+        )
+        return
+
+    # -----------------------------------------------------
+    # AUDIO MENU
+    # -----------------------------------------------------
+
+    if data == "audio_menu":
+        await query.answer()
+
+        await query.edit_message_text(
+            "🎙️ <b>Audio Tools</b>\n\n"
+            "একটি option select করো 👇",
+            parse_mode="HTML",
+            reply_markup=audio_menu(),
+        )
+        return
+
+    if data == "text_to_voice":
+        await start_text_to_voice(
+            update,
+            context,
+        )
+        return
+
+    if data == "voice_changer":
+        await start_voice_changer(
+            update,
+            context,
+        )
+        return
+
+    if data == "audio_cutter":
+        await start_audio_cutter(
+            update,
+            context,
+        )
+        return
+
+    if data == "audio_converter":
+        await start_audio_converter(
+            update,
+            context,
+        )
+        return
+
+    if data == "volume_changer":
+        await start_volume_changer(
+            update,
+            context,
+        )
+        return
+
+    if data == "audio_info":
+        await start_audio_info(
+            update,
+            context,
+        )
+        return
+
+    if data in {
+        "audio_mp3",
+        "audio_wav",
+        "audio_ogg",
+        "audio_m4a",
+        "audio_flac",
+    }:
+        fmt = data.replace(
+            "audio_",
+            "",
+            1,
+        )
+
+        await handle_audio_format(
+            update,
+            context,
+            fmt,
+        )
+        return
+
+    # -----------------------------------------------------
+    # FILE MENU
+    # -----------------------------------------------------
+
+    if data == "file_menu":
+        await query.answer()
+
+        await query.edit_message_text(
+            "🛠️ <b>File Tools</b>\n\n"
+            "একটি option select করো 👇",
+            parse_mode="HTML",
+            reply_markup=file_menu(),
+        )
+        return
+
+    if data == "create_zip":
+        context.user_data.clear()
+
+        context.user_data["file_action"] = (
+            "create_zip"
+        )
+        context.user_data["zip_files"] = []
+
+        await query.answer()
+
+        await query.edit_message_text(
+            "🗜️ <b>Create ZIP</b>\n\n"
+            "যে files ZIP করতে চাও সেগুলো "
+            "একে একে পাঠাও।\n\n"
+            "সবশেষে /done লিখো।",
+            parse_mode="HTML",
+        )
+        return
+
+    if data == "extract_zip":
+        context.user_data.clear()
+
+        context.user_data["file_action"] = (
+            "extract_zip"
+        )
+
+        await query.answer()
+
+        await query.edit_message_text(
+            "📦 <b>Extract ZIP</b>\n\n"
+            "একটি ZIP file পাঠাও।",
+            parse_mode="HTML",
+        )
+        return
+
+    if data == "file_info":
+        context.user_data.clear()
+
+        context.user_data["file_action"] = (
+            "file_info"
+        )
+
+        await query.answer()
+
+        await query.edit_message_text(
+            "ℹ️ <b>File Info</b>\n\n"
+            "একটি file পাঠাও।",
+            parse_mode="HTML",
+        )
+        return
+
+    if data == "file_converter":
+        await query.answer(
+            "🔄 File Converter এখনো active নয়।",
+            show_alert=True,
+        )
+        return
+
+    # -----------------------------------------------------
+    # DEVELOPER
+    # -----------------------------------------------------
+
+    if data == "developer":
+        await query.answer()
+
+        await query.edit_message_text(
+            "👨‍💻 <b>Developer</b>\n\n"
+            f"Name: <b>{DEVELOPER_NAME}</b>\n"
+            f"Telegram: <b>{DEVELOPER_USERNAME}</b>\n\n"
+            "Thanks for using the bot ❤️",
+            parse_mode="HTML",
+            reply_markup=developer_menu(
+                DEVELOPER_USERNAME
+            ),
+        )
+        return
+
+    # -----------------------------------------------------
+    # HELP
+    # -----------------------------------------------------
+
+    if data == "help":
+        await query.answer()
+
+        await query.edit_message_text(
+            "ℹ️ <b>Help</b>\n\n"
+            "📄 PDF Tools\n"
+            "• Text → PDF\n"
+            "• Image → PDF\n"
+            "• Merge / Split PDF\n"
+            "• PDF → Image / Text\n"
+            "• Protect PDF\n\n"
+            "🖼️ Image Tools\n"
+            "• Resize / Compress\n"
+            "• Convert\n"
+            "• Image → PDF\n"
+            "• Image Info\n\n"
+            "🔳 QR Tools\n"
+            "• Text / URL / Wi-Fi\n"
+            "• Contact / Email / Phone\n"
+            "• Scan QR\n"
+            "• QR → PDF\n\n"
+            "🎙️ Audio Tools\n"
+            "• Text → Voice\n"
+            "• Voice processing\n"
+            "• Cutter / Converter\n"
+            "• Volume / Info\n\n"
+            "🛠️ File Tools\n"
+            "• Create ZIP\n"
+            "• Extract ZIP\n"
+            "• File Info",
+            parse_mode="HTML",
+            reply_markup=help_menu(),
+        )
+        return
+
+    # -----------------------------------------------------
     # ADMIN
-    # ========================================================
+    # -----------------------------------------------------
 
-    if data.startswith("admin_"):
-        if user_id != ADMIN_ID:
+    if data == "admin":
+        user = update.effective_user
+
+        if not user or user.id != ADMIN_ID:
             await query.answer(
-                "❌ You are not authorized.",
+                "⛔ Admin only.",
                 show_alert=True,
             )
             return
 
-        if data == "admin_stats":
-            await query.edit_message_text(
-                "📊 Statistics\n\n"
-                "Database/statistics system is currently disabled."
+        await query.answer()
+
+        await query.edit_message_text(
+            "🛡️ <b>Admin Panel</b>\n\n"
+            "Database ছাড়া statistics/users "
+            "features active নয়।",
+            parse_mode="HTML",
+            reply_markup=admin_menu(),
+        )
+        return
+
+    if data.startswith("admin_"):
+        user = update.effective_user
+
+        if not user or user.id != ADMIN_ID:
+            await query.answer(
+                "⛔ Admin only.",
+                show_alert=True,
             )
             return
 
-        if data == "admin_users":
-            await query.edit_message_text(
-                "👥 Users\n\n"
-                "User database is currently disabled."
-            )
-            return
-
-        if data == "admin_broadcast":
-            await query.edit_message_text(
-                "📢 Broadcast\n\n"
-                "Broadcast system is currently disabled."
-            )
-            return
-
-        if data == "admin_ban":
-            await query.edit_message_text(
-                "🚫 Ban\n\n"
-                "Ban system requires a database and is currently disabled."
-            )
-            return
-
-        if data == "admin_unban":
-            await query.edit_message_text(
-                "✅ Unban\n\n"
-                "Unban system requires a database and is currently disabled."
-            )
-            return
-
-        if data == "admin_maintenance":
-            await query.edit_message_text(
-                "🛠️ Maintenance\n\n"
-                "Maintenance control is currently disabled."
-            )
-            return
-
-    # ========================================================
-    # UNKNOWN CALLBACK
-    # ========================================================
+        await query.answer(
+            "এই admin feature এখনো active নয়।",
+            show_alert=True,
+        )
+        return
 
     await query.answer(
-        "This button is not available.",
+        "Unknown option.",
         show_alert=True,
     )
 
 
-# ============================================================
-# TEXT MESSAGE ROUTER
-# ============================================================
+# =========================================================
+# TEXT HANDLER
+# =========================================================
 
 async def text_handler(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE,
 ):
-    if not update.message or not update.effective_user:
+    if not update.message:
         return
 
-    user_id = update.effective_user.id
-    state = get_state(user_id)
+    if await maintenance_check(update):
+        return
 
-    if not state:
-        await update.message.reply_text(
-            "Please choose a tool from the menu.",
-            reply_markup=main_menu(),
+    data = context.user_data
+
+    # PDF Text → PDF
+    if data.get("pdf_action") == "text_to_pdf":
+        await handle_pdf_text(
+            update,
+            context,
         )
         return
 
-    # ========================================================
-    # PDF TEXT
-    # ========================================================
-
-    if state == "pdf_text":
-        await handle_pdf_text(update, context)
-        return
-
-    # ========================================================
-    # PDF PASSWORD
-    # ========================================================
-
-    if state in ("protect_pdf_password", "pdf_password"):
-        await handle_protect_password(update, context)
-        return
-
-    # ========================================================
-    # IMAGE TEXT INPUT
-    # ========================================================
-
-    if state in (
-        "resize_image",
-        "compress_image",
-        "convert_image",
+    # PDF password
+    if (
+        data.get("pdf_action") == "protect"
+        and data.get("protect_input")
     ):
-        await handle_image_text(update, context)
+        await handle_protect_password(
+            update,
+            context,
+        )
         return
 
-    # ========================================================
-    # AUDIO TEXT INPUT
-    # ========================================================
-
-    if state in (
-        "text_to_voice",
-        "audio_cutter_waiting",
-        "volume_waiting",
-    ):
-        await handle_audio_text(update, context)
+    # Image resize dimensions
+    if data.get("image_waiting_dimensions"):
+        await handle_image_text(
+            update,
+            context,
+        )
         return
 
-    # ========================================================
-    # QR TEXT INPUT
-    # ========================================================
+    # Audio Text → Voice
+    if data.get("audio_action") == "text_to_voice":
+        await handle_audio_text(
+            update,
+            context,
+        )
+        return
 
-    if state.startswith("qr_"):
-        await handle_qr_text(update, context)
+    # Audio volume
+    if data.get("audio_waiting_volume"):
+        await handle_volume_text(
+            update,
+            context,
+        )
+        return
+
+    # Audio cutter
+    if data.get("audio_waiting_cut"):
+        await handle_cut_text(
+            update,
+            context,
+        )
+        return
+
+    # QR
+    if data.get("qr_action"):
+        await handle_qr_text(
+            update,
+            context,
+        )
+        return
+
+    # ZIP text message
+    if data.get("file_action") == "create_zip":
+        await update.message.reply_text(
+            "📎 File হিসেবে send করো।\n"
+            "সবশেষে /done লিখো।"
+        )
         return
 
     await update.message.reply_text(
-        "Please send the required file or input for this tool."
+        "🤖 Menu থেকে একটি tool select করো।",
+        reply_markup=main_menu(),
     )
 
 
-# ============================================================
-# PHOTO ROUTER
-# ============================================================
+# =========================================================
+# PHOTO HANDLER
+# =========================================================
 
 async def photo_handler(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE,
 ):
-    if not update.message or not update.effective_user:
+    if not update.message:
         return
 
-    user_id = update.effective_user.id
-    state = get_state(user_id)
+    if await maintenance_check(update):
+        return
 
-    if not state:
-        await update.message.reply_text(
-            "Please choose an image tool first.",
-            reply_markup=main_menu(),
+    data = context.user_data
+
+    # QR first
+    if data.get("qr_action") in {
+        "qr_scan",
+        "qr_to_pdf",
+    }:
+        await handle_qr_image(
+            update,
+            context,
         )
         return
 
-    # QR scanner
-    if state == "qr_scan":
-        await handle_qr_image(update, context)
+    # PDF Image → PDF
+    if data.get("pdf_action") == "image_to_pdf":
+        await handle_pdf_image_to_pdf(
+            update,
+            context,
+        )
         return
 
-    # PDF image -> PDF
-    if state == "pdf_image_to_pdf":
-        await handle_image(update, context)
-        return
-
-    # Image Tools
-    if state in (
-        "resize_image",
-        "compress_image",
-        "convert_image",
-        "image_info",
-        "image_to_pdf",
-    ):
-        await handle_image(update, context)
+    # Image tools
+    if data.get("image_action"):
+        await handle_image(
+            update,
+            context,
+        )
         return
 
     await update.message.reply_text(
-        "This image is not expected for the current tool."
+        "🖼️ আগে একটি image tool select করো।"
     )
 
 
-# ============================================================
-# DOCUMENT ROUTER
-# ============================================================
+# =========================================================
+# DOCUMENT HANDLER
+# =========================================================
 
 async def document_handler(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE,
 ):
-    if not update.message or not update.effective_user:
+    if not update.message:
         return
 
-    user_id = update.effective_user.id
-    state = get_state(user_id)
+    if await maintenance_check(update):
+        return
 
-    if not state:
-        await update.message.reply_text(
-            "Please choose a tool first.",
-            reply_markup=main_menu(),
+    data = context.user_data
+    document = update.message.document
+
+    # QR image/document
+    if data.get("qr_action") in {
+        "qr_scan",
+        "qr_to_pdf",
+    }:
+        await handle_qr_image(
+            update,
+            context,
         )
         return
 
-    # ========================================================
     # PDF
-    # ========================================================
-
-    if state in (
-        "merge_pdf",
-        "split_pdf",
-        "pdf_to_image",
-        "pdf_to_text",
-        "protect_pdf",
-    ):
-        await handle_pdf_document(update, context)
+    if data.get("pdf_action"):
+        await handle_pdf_document(
+            update,
+            context,
+        )
         return
 
-    # ========================================================
-    # AUDIO
-    # ========================================================
-
-    if state in (
-        "audio_info",
-        "audio_converter",
-        "audio_cutter",
-        "volume_changer",
-        "voice_changer",
-    ):
-        await handle_audio_file(update, context)
+    # Audio document
+    if data.get("audio_action"):
+        await handle_audio_file(
+            update,
+            context,
+        )
         return
 
-    # ========================================================
+    action = data.get("file_action")
+
+    # -----------------------------------------------------
     # FILE INFO
-    # ========================================================
+    # -----------------------------------------------------
 
-    if state == "file_info":
-        try:
-            result = await get_file_info(update, context)
+    if action == "file_info":
+        await update.message.reply_text(
+            "ℹ️ <b>File Info</b>\n\n"
+            f"📄 Name: "
+            f"<code>{document.file_name or 'unknown'}</code>\n"
+            f"💾 Size: "
+            f"{(document.file_size or 0) / 1024:.2f} KB\n"
+            f"🗂️ MIME: "
+            f"{document.mime_type or 'unknown'}",
+            parse_mode="HTML",
+        )
 
-            if result:
-                await update.message.reply_text(str(result))
-        except Exception as exc:
-            logger.exception("File info error")
-            await update.message.reply_text(
-                f"❌ Could not read file information.\n\n{exc}"
-            )
+        context.user_data.clear()
         return
 
-    # ========================================================
-    # ZIP EXTRACTION
-    # ========================================================
+    # -----------------------------------------------------
+    # EXTRACT ZIP
+    # -----------------------------------------------------
 
-    if state == "extract_zip":
-        try:
-            await extract_zip(update, context)
-        except Exception as exc:
-            logger.exception("ZIP extraction error")
+    if action == "extract_zip":
+        filename = document.file_name or ""
+
+        if not filename.lower().endswith(".zip"):
             await update.message.reply_text(
-                f"❌ ZIP extraction failed.\n\n{exc}"
+                "⚠️ শুধু ZIP file পাঠাও।"
             )
+            return
+
+        folder = create_temp_dir()
+
+        zip_path = os.path.join(
+            folder,
+            os.path.basename(filename),
+        )
+
+        try:
+            telegram_file = await document.get_file()
+
+            await telegram_file.download_to_drive(
+                zip_path
+            )
+
+            extract_folder = os.path.join(
+                folder,
+                "extracted",
+            )
+
+            extracted = extract_zip(
+                zip_path,
+                extract_folder,
+            )
+
+            if not extracted:
+                await update.message.reply_text(
+                    "❌ ZIP-এর ভিতরে কোনো file পাওয়া যায়নি।"
+                )
+                return
+
+            await update.message.reply_text(
+                f"📦 Extract complete: "
+                f"{len(extracted)} file"
+            )
+
+            for path in extracted:
+                if not os.path.isfile(path):
+                    continue
+
+                with open(path, "rb") as file:
+                    await update.message.reply_document(
+                        document=file,
+                        filename=os.path.basename(path),
+                    )
+
+        except Exception as error:
+            await update.message.reply_text(
+                "❌ ZIP extract করা যায়নি:\n"
+                f"{error}"
+            )
+
+        finally:
+            cleanup_temp_folder(folder)
+            context.user_data.clear()
+
         return
 
-    # ========================================================
-    # ZIP CREATION
-    # ========================================================
+    # -----------------------------------------------------
+    # CREATE ZIP
+    # -----------------------------------------------------
 
-    if state == "create_zip":
+    if action == "create_zip":
+        folder = data.get("zip_folder")
+
+        if not folder:
+            folder = create_temp_dir()
+            data["zip_folder"] = folder
+
+        filename = os.path.basename(
+            document.file_name or "file"
+        )
+
+        path = os.path.join(
+            folder,
+            filename,
+        )
+
         try:
-            await create_zip(update, context)
-        except Exception as exc:
-            logger.exception("ZIP creation error")
-            await update.message.reply_text(
-                f"❌ Could not add this file.\n\n{exc}"
+            telegram_file = await document.get_file()
+
+            await telegram_file.download_to_drive(
+                path
             )
-        return
 
-    # ========================================================
-    # IMAGE DOCUMENT
-    # ========================================================
+            files = data.setdefault(
+                "zip_files",
+                [],
+            )
 
-    if state in (
-        "resize_image",
-        "compress_image",
-        "convert_image",
-        "image_info",
-        "image_to_pdf",
-    ):
-        await handle_image(update, context)
+            files.append(path)
+
+            await update.message.reply_text(
+                f"✅ {filename} added.\n"
+                "আরও file পাঠাতে পারো।\n"
+                "শেষ হলে /done লিখো।"
+            )
+
+        except Exception as error:
+            await update.message.reply_text(
+                "❌ File save করা যায়নি:\n"
+                f"{error}"
+            )
+
         return
 
     await update.message.reply_text(
-        "❌ This file is not expected for the current tool."
+        "📄 File received.\n"
+        "Menu থেকে একটি file tool select করো।"
     )
 
 
-# ============================================================
-# AUDIO / VOICE ROUTER
-# ============================================================
+# =========================================================
+# AUDIO HANDLERS
+# =========================================================
 
 async def audio_handler(
     update: Update,
@@ -789,7 +1021,13 @@ async def audio_handler(
     if not update.message:
         return
 
-    await handle_audio_file(update, context)
+    if await maintenance_check(update):
+        return
+
+    await handle_audio_file(
+        update,
+        context,
+    )
 
 
 async def voice_handler(
@@ -799,111 +1037,176 @@ async def voice_handler(
     if not update.message:
         return
 
-    await handle_audio_file(update, context)
+    if await maintenance_check(update):
+        return
+
+    await handle_audio_file(
+        update,
+        context,
+    )
 
 
-# ============================================================
+# =========================================================
+# VIDEO
+# =========================================================
+
+async def video_handler(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+):
+    if update.message:
+        await update.message.reply_text(
+            "🎥 Video processing বর্তমানে available নয়।"
+        )
+
+
+# =========================================================
 # /DONE
-# ============================================================
+# =========================================================
 
 async def done_command(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE,
 ):
-    if not update.message or not update.effective_user:
+    if not update.message:
         return
 
-    user_id = update.effective_user.id
-    state = get_state(user_id)
-
-    if state in ("merge_pdf", "split_pdf"):
-        try:
-            await done_pdf(update, context)
-        finally:
-            clear_state(user_id)
+    if await maintenance_check(update):
         return
 
-    if state in ("image_to_pdf", "pdf_image_to_pdf"):
-        try:
-            await done_image_to_pdf(update, context)
-        finally:
-            clear_state(user_id)
-        return
+    data = context.user_data
 
-    if state == "create_zip":
-        try:
-            await create_zip(update, context)
-        finally:
-            clear_state(user_id)
-        return
-
-    await update.message.reply_text(
-        "Nothing is waiting for /done."
-    )
-
-
-# ============================================================
-# ADMIN COMMAND
-# ============================================================
-
-async def admin_command(
-    update: Update,
-    context: ContextTypes.DEFAULT_TYPE,
-):
-    if not update.message or not update.effective_user:
-        return
-
-    if update.effective_user.id != ADMIN_ID:
-        await update.message.reply_text(
-            "❌ You are not authorized to use the Admin panel."
+    # PDF Image → PDF
+    if data.get("pdf_action") == "image_to_pdf":
+        await done_pdf(
+            update,
+            context,
         )
         return
 
+    # PDF Merge
+    if data.get("pdf_action") == "merge":
+        await done_merge_pdf(
+            update,
+            context,
+        )
+        return
+
+    # Image → PDF
+    if data.get("image_action") == "image_to_pdf":
+        await done_image_to_pdf(
+            update,
+            context,
+        )
+        return
+
+    # Create ZIP
+    if data.get("file_action") == "create_zip":
+        files = data.get(
+            "zip_files",
+            [],
+        )
+
+        if not files:
+            await update.message.reply_text(
+                "❌ কোনো file যোগ করা হয়নি।"
+            )
+            return
+
+        folder = data.get("zip_folder")
+
+        if not folder:
+            await update.message.reply_text(
+                "❌ ZIP folder পাওয়া যায়নি।"
+            )
+            return
+
+        output = os.path.join(
+            folder,
+            "files.zip",
+        )
+
+        try:
+            create_zip(
+                files,
+                output,
+            )
+
+            with open(output, "rb") as file:
+                await update.message.reply_document(
+                    document=file,
+                    filename="files.zip",
+                    caption="🗜️ ZIP তৈরি হয়েছে!",
+                )
+
+        except Exception as error:
+            await update.message.reply_text(
+                "❌ ZIP তৈরি করা যায়নি:\n"
+                f"{error}"
+            )
+
+        finally:
+            cleanup_temp_folder(folder)
+            context.user_data.clear()
+
+        return
+
     await update.message.reply_text(
-        "👑 *Admin Panel*\n\nChoose an option:",
-        reply_markup=admin_menu(),
-        parse_mode="Markdown",
+        "ℹ️ কোনো active process নেই।"
     )
 
 
-# ============================================================
-# CANCEL
-# ============================================================
+# =========================================================
+# /CANCEL
+# =========================================================
 
 async def cancel_command(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE,
 ):
-    if not update.message or not update.effective_user:
+    if not update.message:
         return
 
-    user_id = update.effective_user.id
-
-    clear_state(user_id)
+    context.user_data.clear()
 
     await update.message.reply_text(
-        "❌ Current operation cancelled.",
+        "❌ Process cancelled.",
         reply_markup=main_menu(),
     )
 
 
-# ============================================================
+# =========================================================
 # ERROR HANDLER
-# ============================================================
+# =========================================================
 
 async def error_handler(
     update: object,
     context: ContextTypes.DEFAULT_TYPE,
 ):
     logger.exception(
-        "Unhandled exception:",
+        "Unhandled exception",
         exc_info=context.error,
     )
 
+    try:
+        if (
+            isinstance(update, Update)
+            and update.message
+        ):
+            await update.message.reply_text(
+                "❌ Process করতে সমস্যা হয়েছে। "
+                "আবার চেষ্টা করো।"
+            )
 
-# ============================================================
+    except Exception:
+        logger.exception(
+            "Failed to send error message"
+        )
+
+
+# =========================================================
 # MAIN
-# ============================================================
+# =========================================================
 
 def main():
     if not BOT_TOKEN:
@@ -911,50 +1214,42 @@ def main():
             "BOT_TOKEN environment variable is missing."
         )
 
-    logger.info("All-in-One Telegram Bot starting...")
-
     application = (
         Application.builder()
         .token(BOT_TOKEN)
         .build()
     )
 
-    # ========================================================
-    # COMMANDS
-    # ========================================================
-
+    # Commands
     application.add_handler(
-        CommandHandler("start", start)
+        CommandHandler(
+            "start",
+            start,
+        )
     )
 
     application.add_handler(
-        CommandHandler("help", help_command)
+        CommandHandler(
+            "done",
+            done_command,
+        )
     )
 
     application.add_handler(
-        CommandHandler("admin", admin_command)
+        CommandHandler(
+            "cancel",
+            cancel_command,
+        )
     )
 
+    # Buttons
     application.add_handler(
-        CommandHandler("done", done_command)
+        CallbackQueryHandler(
+            button_handler
+        )
     )
 
-    application.add_handler(
-        CommandHandler("cancel", cancel_command)
-    )
-
-    # ========================================================
-    # CALLBACK BUTTONS
-    # ========================================================
-
-    application.add_handler(
-        CallbackQueryHandler(button_handler)
-    )
-
-    # ========================================================
-    # PHOTOS
-    # ========================================================
-
+    # Photos
     application.add_handler(
         MessageHandler(
             filters.PHOTO,
@@ -962,32 +1257,7 @@ def main():
         )
     )
 
-    # ========================================================
-    # AUDIO
-    # ========================================================
-
-    application.add_handler(
-        MessageHandler(
-            filters.AUDIO,
-            audio_handler,
-        )
-    )
-
-    # ========================================================
-    # VOICE
-    # ========================================================
-
-    application.add_handler(
-        MessageHandler(
-            filters.VOICE,
-            voice_handler,
-        )
-    )
-
-    # ========================================================
-    # DOCUMENTS
-    # ========================================================
-
+    # Documents
     application.add_handler(
         MessageHandler(
             filters.Document.ALL,
@@ -995,10 +1265,31 @@ def main():
         )
     )
 
-    # ========================================================
-    # TEXT
-    # ========================================================
+    # Audio
+    application.add_handler(
+        MessageHandler(
+            filters.AUDIO,
+            audio_handler,
+        )
+    )
 
+    # Voice
+    application.add_handler(
+        MessageHandler(
+            filters.VOICE,
+            voice_handler,
+        )
+    )
+
+    # Video
+    application.add_handler(
+        MessageHandler(
+            filters.VIDEO,
+            video_handler,
+        )
+    )
+
+    # Text
     application.add_handler(
         MessageHandler(
             filters.TEXT & ~filters.COMMAND,
@@ -1006,17 +1297,17 @@ def main():
         )
     )
 
-    # ========================================================
-    # ERROR
-    # ========================================================
+    application.add_error_handler(
+        error_handler
+    )
 
-    application.add_error_handler(error_handler)
-
-    logger.info("Bot polling started.")
+    logger.info(
+        "%s starting...",
+        BOT_NAME,
+    )
 
     application.run_polling(
-        drop_pending_updates=True,
-        allowed_updates=Update.ALL_TYPES,
+        allowed_updates=Update.ALL_TYPES
     )
 
 
