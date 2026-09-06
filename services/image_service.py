@@ -1,29 +1,26 @@
 import os
+
 from PIL import Image
 
 
 SUPPORTED_FORMATS = {
-    "jpg": "JPEG",
-    "jpeg": "JPEG",
-    "png": "PNG",
-    "webp": "WEBP",
-    "bmp": "BMP",
-    "gif": "GIF",
-    "tiff": "TIFF",
+    "jpg",
+    "jpeg",
+    "png",
+    "webp",
+    "bmp",
+    "gif",
+    "tiff",
 }
 
 
-def open_image(image_path):
-    """Open an image."""
-    return Image.open(image_path)
+def open_image(input_path):
+    if not os.path.isfile(input_path):
+        raise FileNotFoundError(
+            "Image file not found."
+        )
 
-
-def _prepare_for_jpeg(image):
-    """Convert an image to RGB when saving as JPEG."""
-    if image.mode != "RGB":
-        return image.convert("RGB")
-
-    return image.copy()
+    return Image.open(input_path)
 
 
 def resize_image(
@@ -33,45 +30,37 @@ def resize_image(
     height,
     keep_aspect=True,
 ):
-    """Resize an image."""
-
-    width = int(width)
-    height = int(height)
-
     if width <= 0 or height <= 0:
         raise ValueError(
-            "Width and height must be greater than 0."
+            "Width and height must be positive."
         )
 
-    with Image.open(input_path) as image:
-        if keep_aspect:
-            resized = image.copy()
-            resized.thumbnail(
-                (width, height),
-                Image.Resampling.LANCZOS,
-            )
-        else:
-            resized = image.resize(
-                (width, height),
-                Image.Resampling.LANCZOS,
-            )
+    image = open_image(input_path)
 
-        try:
-            if output_path.lower().endswith(
-                (".jpg", ".jpeg")
-            ):
-                prepared = _prepare_for_jpeg(resized)
-                prepared.save(
-                    output_path,
-                    format="JPEG",
-                    quality=95,
-                    optimize=True,
-                )
-                prepared.close()
-            else:
-                resized.save(output_path)
-        finally:
-            resized.close()
+    if keep_aspect:
+        image.thumbnail(
+            (width, height),
+            Image.Resampling.LANCZOS,
+        )
+        resized = image
+    else:
+        resized = image.resize(
+            (width, height),
+            Image.Resampling.LANCZOS,
+        )
+
+    output_dir = os.path.dirname(output_path)
+
+    if output_dir:
+        os.makedirs(
+            output_dir,
+            exist_ok=True,
+        )
+
+    resized.save(
+        output_path,
+        quality=95,
+    )
 
     return output_path
 
@@ -81,43 +70,61 @@ def compress_image(
     output_path,
     quality=70,
 ):
-    """Compress an image."""
+    quality = max(
+        1,
+        min(95, int(quality)),
+    )
 
-    quality = max(1, min(100, int(quality)))
+    image = open_image(input_path)
 
-    with Image.open(input_path) as image:
-        if output_path.lower().endswith(
-            (".jpg", ".jpeg")
-        ):
-            prepared = _prepare_for_jpeg(image)
+    output_dir = os.path.dirname(output_path)
 
-            try:
-                prepared.save(
-                    output_path,
-                    format="JPEG",
-                    quality=quality,
-                    optimize=True,
-                )
-            finally:
-                prepared.close()
+    if output_dir:
+        os.makedirs(
+            output_dir,
+            exist_ok=True,
+        )
 
-        elif output_path.lower().endswith(".webp"):
-            image.save(
-                output_path,
-                format="WEBP",
-                quality=quality,
-                method=6,
-            )
+    extension = os.path.splitext(
+        output_path
+    )[1].lower()
 
-        elif output_path.lower().endswith(".png"):
-            image.save(
-                output_path,
-                format="PNG",
-                optimize=True,
-            )
+    if extension in {
+        ".jpg",
+        ".jpeg",
+    }:
+        image = image.convert("RGB")
 
-        else:
-            image.save(output_path)
+        image.save(
+            output_path,
+            format="JPEG",
+            quality=quality,
+            optimize=True,
+        )
+
+    elif extension == ".webp":
+        if image.mode not in {
+            "RGB",
+            "RGBA",
+        }:
+            image = image.convert("RGB")
+
+        image.save(
+            output_path,
+            format="WEBP",
+            quality=quality,
+            optimize=True,
+        )
+
+    elif extension == ".png":
+        image.save(
+            output_path,
+            format="PNG",
+            optimize=True,
+        )
+
+    else:
+        image.save(output_path)
 
     return output_path
 
@@ -127,98 +134,96 @@ def convert_image(
     output_path,
     output_format,
 ):
-    """Convert an image to another supported format."""
-
     output_format = (
-        str(output_format)
+        output_format
         .lower()
         .replace(".", "")
     )
 
     if output_format not in SUPPORTED_FORMATS:
         raise ValueError(
-            f"Unsupported image format: {output_format}"
+            f"Unsupported image format: "
+            f"{output_format}"
         )
 
-    pil_format = SUPPORTED_FORMATS[
+    image = open_image(input_path)
+
+    output_dir = os.path.dirname(output_path)
+
+    if output_dir:
+        os.makedirs(
+            output_dir,
+            exist_ok=True,
+        )
+
+    format_map = {
+        "jpg": "JPEG",
+        "jpeg": "JPEG",
+        "png": "PNG",
+        "webp": "WEBP",
+        "bmp": "BMP",
+        "gif": "GIF",
+        "tiff": "TIFF",
+    }
+
+    save_format = format_map[
         output_format
     ]
 
-    with Image.open(input_path) as image:
-        if pil_format == "JPEG":
-            prepared = _prepare_for_jpeg(image)
+    if save_format == "JPEG":
+        image = image.convert("RGB")
 
-            try:
-                prepared.save(
-                    output_path,
-                    format="JPEG",
-                    quality=95,
-                    optimize=True,
-                )
-            finally:
-                prepared.close()
+    elif save_format in {
+        "BMP",
+        "WEBP",
+    }:
+        if image.mode not in {
+            "RGB",
+            "RGBA",
+        }:
+            image = image.convert("RGB")
 
-        elif pil_format == "GIF":
-            image.save(
-                output_path,
-                format="GIF",
-            )
-
-        else:
-            image.save(
-                output_path,
-                format=pil_format,
-            )
+    image.save(
+        output_path,
+        format=save_format,
+    )
 
     return output_path
 
 
-def get_image_info(image_path):
-    """Return basic image information."""
+def get_image_info(input_path):
+    image = open_image(input_path)
 
-    if not os.path.exists(image_path):
-        raise FileNotFoundError(
-            "Image file does not exist."
-        )
+    width, height = image.size
 
-    file_size = os.path.getsize(image_path)
+    size_bytes = os.path.getsize(
+        input_path
+    )
 
-    with Image.open(image_path) as image:
-        return {
-            "filename": os.path.basename(image_path),
-            "format": image.format or "Unknown",
-            "width": image.width,
-            "height": image.height,
-            "mode": image.mode,
-            "size_bytes": file_size,
-            "size_kb": round(
-                file_size / 1024,
-                2,
-            ),
-            "size_mb": round(
-                file_size / (1024 * 1024),
-                2,
-            ),
-        }
+    return {
+        "filename": os.path.basename(
+            input_path
+        ),
+        "format": image.format or "Unknown",
+        "mode": image.mode,
+        "width": width,
+        "height": height,
+        "size_bytes": size_bytes,
+        "size_kb": round(
+            size_bytes / 1024,
+            2,
+        ),
+        "size_mb": round(
+            size_bytes / (1024 * 1024),
+            2,
+        ),
+    }
 
 
-def image_to_rgb(
-    input_path,
-    output_path,
-):
-    """Convert an image to RGB JPEG."""
+def image_to_rgb(input_path):
+    image = open_image(input_path)
 
-    with Image.open(input_path) as image:
-        rgb_image = image.convert("RGB")
+    if image.mode != "RGB":
+        image = image.convert("RGB")
 
-        try:
-            rgb_image.save(
-                output_path,
-                format="JPEG",
-                quality=95,
-                optimize=True,
-            )
-        finally:
-            rgb_image.close()
-
-    return output_path
+    return image
