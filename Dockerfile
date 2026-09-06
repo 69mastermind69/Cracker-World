@@ -6,7 +6,6 @@ ENV PIP_NO_CACHE_DIR=1
 
 WORKDIR /app
 
-# System packages required for audio, image and PDF processing
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         ffmpeg \
@@ -18,17 +17,13 @@ RUN apt-get update \
         libglib2.0-0 \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Python dependencies
 COPY requirements.txt .
 
 RUN pip install --upgrade pip \
     && pip install -r requirements.txt
 
-# Copy project files
 COPY . .
 
-# Temporary working directory
 RUN mkdir -p /tmp/telegram_bot
 
-# Start bot
 CMD ["python", "bot.py"]
