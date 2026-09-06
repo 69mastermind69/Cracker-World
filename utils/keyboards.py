@@ -378,3 +378,48 @@ def admin_menu():
     ]
 
     return InlineKeyboardMarkup(keyboard)
+# =========================================================
+# HELP MENU
+# =========================================================
+
+def help_menu():
+    keyboard = [
+        [
+            InlineKeyboardButton(
+                "📄 PDF Tools",
+                callback_data="pdf_tools",
+            ),
+        ],
+        [
+            InlineKeyboardButton(
+                "🖼️ Image Tools",
+                callback_data="image_tools",
+            ),
+        ],
+        [
+            InlineKeyboardButton(
+                "🔳 QR Tools",
+                callback_data="qr_tools",
+            ),
+        ],
+        [
+            InlineKeyboardButton(
+                "🎙️ Audio Tools",
+                callback_data="audio_tools",
+            ),
+        ],
+        [
+            InlineKeyboardButton(
+                "🛠️ File Tools",
+                callback_data="file_tools",
+            ),
+        ],
+        [
+            InlineKeyboardButton(
+                "🔙 Back",
+                callback_data="home",
+            ),
+        ],
+    ]
+
+    return InlineKeyboardMarkup(keyboard)
