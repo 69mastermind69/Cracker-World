@@ -67,6 +67,7 @@ from handlers.qr import (
     start_qr_wifi,
     start_qr_contact,
     start_qr_to_pdf,
+    start_qr_scan,
     handle_qr_text,
     handle_qr_image,
 )
@@ -80,7 +81,10 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def start(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+):
     context.user_data.clear()
 
     await update.message.reply_text(
@@ -90,7 +94,10 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 
-async def admin(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def admin(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+):
     if not update.effective_user:
         return
 
@@ -121,7 +128,7 @@ async def button_handler(
     data = query.data
 
     # =========================
-    # MAIN MENU
+    # HOME
     # =========================
 
     if data == "home":
@@ -135,7 +142,7 @@ async def button_handler(
         return
 
     # =========================
-    # CATEGORY MENUS
+    # PDF MENU
     # =========================
 
     if data == "pdf_menu":
@@ -146,6 +153,10 @@ async def button_handler(
         )
         return
 
+    # =========================
+    # IMAGE MENU
+    # =========================
+
     if data == "image_menu":
         await query.edit_message_text(
             "🖼️ Image Tools\n\n"
@@ -153,6 +164,10 @@ async def button_handler(
             reply_markup=image_menu(),
         )
         return
+
+    # =========================
+    # QR MENU
+    # =========================
 
     if data == "qr_menu":
         await query.edit_message_text(
@@ -162,6 +177,10 @@ async def button_handler(
         )
         return
 
+    # =========================
+    # AUDIO MENU
+    # =========================
+
     if data == "audio_menu":
         await query.edit_message_text(
             "🎙️ Audio Tools\n\n"
@@ -169,6 +188,10 @@ async def button_handler(
             reply_markup=audio_menu(),
         )
         return
+
+    # =========================
+    # FILE MENU
+    # =========================
 
     if data == "file_menu":
         await query.edit_message_text(
@@ -179,55 +202,85 @@ async def button_handler(
         return
 
     # =========================
-    # PDF TOOLS
+    # PDF FEATURES
     # =========================
 
     if data == "text_to_pdf":
-        await start_text_to_pdf(update, context)
+        await start_text_to_pdf(
+            update,
+            context,
+        )
         return
 
     if data == "image_to_pdf":
-        await start_image_tools_pdf(update, context)
+        await start_image_tools_pdf(
+            update,
+            context,
+        )
         return
 
     if data == "merge_pdf":
-        await start_merge_pdf(update, context)
+        await start_merge_pdf(
+            update,
+            context,
+        )
         return
 
     if data == "split_pdf":
-        await start_split_pdf(update, context)
+        await start_split_pdf(
+            update,
+            context,
+        )
         return
 
     if data == "pdf_to_text":
-        await start_pdf_to_text(update, context)
+        await start_pdf_to_text(
+            update,
+            context,
+        )
         return
 
     if data == "protect_pdf":
-        await start_protect_pdf(update, context)
+        await start_protect_pdf(
+            update,
+            context,
+        )
         return
 
     # =========================
-    # IMAGE TOOLS
+    # IMAGE FEATURES
     # =========================
 
     if data == "resize_image":
-        await start_resize_image(update, context)
+        await start_resize_image(
+            update,
+            context,
+        )
         return
 
     if data == "compress_image":
-        await start_compress_image(update, context)
+        await start_compress_image(
+            update,
+            context,
+        )
         return
 
     if data == "convert_image":
-        await start_convert_image(update, context)
+        await start_convert_image(
+            update,
+            context,
+        )
         return
 
     if data == "image_info":
-        await start_image_info(update, context)
+        await start_image_info(
+            update,
+            context,
+        )
         return
 
     # =========================
-    # IMAGE CONVERT
+    # IMAGE CONVERSION
     # =========================
 
     if data == "convert_jpg":
@@ -263,48 +316,66 @@ async def button_handler(
         return
 
     # =========================
-    # QR TOOLS
+    # QR FEATURES
     # =========================
 
     if data == "qr_text":
-        await start_qr_text(update, context)
+        await start_qr_text(
+            update,
+            context,
+        )
         return
 
     if data == "qr_url":
-        await start_qr_url(update, context)
+        await start_qr_url(
+            update,
+            context,
+        )
         return
 
     if data == "qr_phone":
-        await start_qr_phone(update, context)
+        await start_qr_phone(
+            update,
+            context,
+        )
         return
 
     if data == "qr_email":
-        await start_qr_email(update, context)
+        await start_qr_email(
+            update,
+            context,
+        )
         return
 
     if data == "qr_wifi":
-        await start_qr_wifi(update, context)
+        await start_qr_wifi(
+            update,
+            context,
+        )
         return
 
     if data == "qr_contact":
-        await start_qr_contact(update, context)
+        await start_qr_contact(
+            update,
+            context,
+        )
         return
 
     if data == "qr_to_pdf":
-        await start_qr_to_pdf(update, context)
+        await start_qr_to_pdf(
+            update,
+            context,
+        )
         return
 
     # =========================
-    # QR SCAN
+    # QR SCANNER
     # =========================
 
     if data == "qr_scan":
-        await query.edit_message_text(
-            "🔍 Scan QR\n\n"
-            "এই feature-এর জন্য QR image পাঠাও।\n\n"
-            "⚠️ QR decoder module পরবর্তী ধাপে "
-            "connect করা হবে।",
-            reply_markup=qr_menu(),
+        await start_qr_scan(
+            update,
+            context,
         )
         return
 
@@ -313,7 +384,6 @@ async def button_handler(
     # =========================
 
     if data == "developer":
-
         text = (
             "👨‍💻 Developer\n\n"
             f"Name: {DEVELOPER_NAME}\n"
@@ -345,7 +415,6 @@ async def button_handler(
     # =========================
 
     if data == "help":
-
         help_keyboard = InlineKeyboardMarkup([
             [
                 InlineKeyboardButton(
@@ -390,7 +459,7 @@ async def button_handler(
 
             "🛠️ File Tools\n"
             "• ZIP\n"
-            "• Extract\n"
+            "• Extract ZIP\n"
             "• File Converter\n\n"
 
             "⚠️ কিছু feature এখনো development-এ আছে।",
@@ -400,7 +469,7 @@ async def button_handler(
         return
 
     # =========================
-    # ADMIN
+    # ADMIN FEATURES
     # =========================
 
     admin_features = {
@@ -413,7 +482,6 @@ async def button_handler(
     }
 
     if data in admin_features:
-
         if not update.effective_user:
             return
 
@@ -436,16 +504,13 @@ async def button_handler(
     # =========================
 
     future_features = {
-
         "pdf_to_image": "🖼️ PDF → Image",
-
         "text_to_voice": "🗣️ Text → Voice",
         "voice_changer": "🎭 Voice Changer",
         "audio_cutter": "✂️ Audio Cutter",
         "audio_converter": "🔄 Audio Converter",
         "volume_changer": "🔊 Volume Changer",
         "audio_info": "ℹ️ Audio Info",
-
         "create_zip": "🗜️ Create ZIP",
         "extract_zip": "📦 Extract ZIP",
         "file_converter": "🔄 File Converter",
@@ -453,7 +518,6 @@ async def button_handler(
     }
 
     if data in future_features:
-
         back_keyboard = InlineKeyboardMarkup([
             [
                 InlineKeyboardButton(
@@ -472,6 +536,10 @@ async def button_handler(
         )
         return
 
+
+# =========================
+# TEXT HANDLER
+# =========================
 
 async def text_handler(
     update: Update,
@@ -502,7 +570,7 @@ async def text_handler(
         )
         return
 
-    # Image resize
+    # Image Resize
     if context.user_data.get(
         "image_waiting_dimensions"
     ):
@@ -513,7 +581,7 @@ async def text_handler(
         )
         return
 
-    # QR text-based tools
+    # QR Text Features
     if context.user_data.get(
         "qr_action"
     ):
@@ -525,6 +593,10 @@ async def text_handler(
         return
 
 
+# =========================
+# PHOTO HANDLER
+# =========================
+
 async def photo_handler(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE,
@@ -532,10 +604,13 @@ async def photo_handler(
     if not update.message:
         return
 
-    # QR → PDF
+    # QR Scan / QR → PDF
     if context.user_data.get(
         "qr_action"
-    ) == "qr_to_pdf":
+    ) in (
+        "qr_scan",
+        "qr_to_pdf",
+    ):
 
         await handle_qr_image(
             update,
@@ -554,7 +629,7 @@ async def photo_handler(
         )
         return
 
-    # Old PDF Image → PDF
+    # PDF Image → PDF
     if context.user_data.get(
         "pdf_action"
     ) == "image_to_pdf":
@@ -565,6 +640,10 @@ async def photo_handler(
         )
         return
 
+
+# =========================
+# DOCUMENT HANDLER
+# =========================
 
 async def document_handler(
     update: Update,
@@ -578,6 +657,10 @@ async def document_handler(
         context,
     )
 
+
+# =========================
+# DONE COMMAND
+# =========================
 
 async def done_command(
     update: Update,
@@ -603,6 +686,10 @@ async def done_command(
     )
 
 
+# =========================
+# CANCEL COMMAND
+# =========================
+
 async def cancel_command(
     update: Update,
     context: ContextTypes.DEFAULT_TYPE,
@@ -615,6 +702,10 @@ async def cancel_command(
     )
 
 
+# =========================
+# ERROR HANDLER
+# =========================
+
 async def error_handler(
     update: object,
     context: ContextTypes.DEFAULT_TYPE,
@@ -625,8 +716,11 @@ async def error_handler(
     )
 
 
-def main():
+# =========================
+# MAIN
+# =========================
 
+def main():
     if not BOT_TOKEN:
         raise RuntimeError(
             "BOT_TOKEN environment variable "
@@ -639,6 +733,7 @@ def main():
         .build()
     )
 
+    # Commands
     application.add_handler(
         CommandHandler(
             "start",
@@ -667,12 +762,14 @@ def main():
         )
     )
 
+    # Inline buttons
     application.add_handler(
         CallbackQueryHandler(
             button_handler,
         )
     )
 
+    # Photos
     application.add_handler(
         MessageHandler(
             filters.PHOTO,
@@ -680,6 +777,7 @@ def main():
         )
     )
 
+    # Documents
     application.add_handler(
         MessageHandler(
             filters.Document.ALL,
@@ -687,6 +785,7 @@ def main():
         )
     )
 
+    # Text
     application.add_handler(
         MessageHandler(
             filters.TEXT & ~filters.COMMAND,
@@ -694,6 +793,7 @@ def main():
         )
     )
 
+    # Errors
     application.add_error_handler(
         error_handler
     )
