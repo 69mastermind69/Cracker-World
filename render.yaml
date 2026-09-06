@@ -1,12 +1,12 @@
 services:
-  - type: worker
+  - type: web
     name: all-in-one-telegram-bot
     runtime: docker
+    plan: free
     dockerfilePath: ./Dockerfile
     dockerContext: .
     envVars:
       - key: BOT_TOKEN
         sync: false
-
       - key: ADMIN_ID
         sync: false
