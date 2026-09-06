@@ -7,24 +7,42 @@ from telegram.ext import (
     CallbackQueryHandler,
     CommandHandler,
     ContextTypes,
+    MessageHandler,
+    filters,
 )
 
+from config import (
+    BOT_TOKEN,
+    ADMIN_ID,
+    DEVELOPER_NAME,
+    DEVELOPER_USERNAME,
+    DEVELOPER_CHANNEL,
+)
 
-# =========================================================
-# CONFIG
-# =========================================================
+from utils.keyboards import (
+    main_menu,
+    pdf_menu,
+    image_menu,
+    qr_menu,
+    audio_menu,
+    file_menu,
+    developer_menu,
+    admin_menu,
+)
 
-BOT_TOKEN = os.getenv("BOT_TOKEN", "")
-ADMIN_ID = int(os.getenv("ADMIN_ID", "0"))
+from handlers.pdf import (
+    start_text_to_pdf,
+    start_image_to_pdf,
+    start_merge_pdf,
+    start_split_pdf,
+    start_pdf_to_text,
+    start_protect_pdf,
+    handle_pdf_text,
+    handle_pdf_document,
+    handle_protect_password,
+    done_pdf,
+)
 
-DEVELOPER_NAME = os.getenv("DEVELOPER_NAME", "Your Name")
-DEVELOPER_USERNAME = os.getenv("DEVELOPER_USERNAME", "@yourusername")
-DEVELOPER_CHANNEL = os.getenv("DEVELOPER_CHANNEL", "")
-
-
-# =========================================================
-# LOGGING
-# =========================================================
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -34,593 +52,299 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-# =========================================================
+# =========================
 # START
-# =========================================================
+# =========================
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user = update.effective_user
+    context.user_data.clear()
 
-    text = (
-        f"👋 Hello {user.first_name}!\n\n"
-        "🤖 Welcome to our All-in-One Utility Bot.\n\n"
-        "Choose a category below:"
-    )
-
-    await update.effective_message.reply_text(
-        text,
+    await update.message.reply_text(
+        "🤖 Welcome to All-in-One Bot!\n\n"
+        "নিচের menu থেকে একটি feature নির্বাচন করো:",
         reply_markup=main_menu(),
     )
 
 
-# =========================================================
-# MAIN MENU
-# =========================================================
+# =========================
+# ADMIN
+# =========================
 
-def main_menu():
-    keyboard = [
-        [
-            InlineKeyboardButton("📄 PDF Tools", callback_data="pdf_menu"),
-            InlineKeyboardButton("🖼️ Image Tools", callback_data="image_menu"),
-        ],
-        [
-            InlineKeyboardButton("🔳 QR Tools", callback_data="qr_menu"),
-            InlineKeyboardButton("🎙️ Audio Tools", callback_data="audio_menu"),
-        ],
-        [
-            InlineKeyboardButton("🛠️ File Tools", callback_data="file_menu"),
-        ],
-        [
-            InlineKeyboardButton("👨‍💻 Developer", callback_data="developer"),
-            InlineKeyboardButton("ℹ️ Help", callback_data="help"),
-        ],
-    ]
-
-    return InlineKeyboardMarkup(keyboard)
-
-
-# =========================================================
-# PDF MENU
-# =========================================================
-
-def pdf_menu():
-    keyboard = [
-        [
-            InlineKeyboardButton(
-                "📝 Text → PDF",
-                callback_data="text_to_pdf",
-            )
-        ],
-        [
-            InlineKeyboardButton(
-                "🖼️ Image → PDF",
-                callback_data="image_to_pdf",
-            )
-        ],
-        [
-            InlineKeyboardButton(
-                "🔗 Merge PDF",
-                callback_data="merge_pdf",
-            ),
-            InlineKeyboardButton(
-                "✂️ Split PDF",
-                callback_data="split_pdf",
-            ),
-        ],
-        [
-            InlineKeyboardButton(
-                "🖼️ PDF → Image",
-                callback_data="pdf_to_image",
-            ),
-            InlineKeyboardButton(
-                "📝 PDF → Text",
-                callback_data="pdf_to_text",
-            ),
-        ],
-        [
-            InlineKeyboardButton(
-                "🔐 Protect PDF",
-                callback_data="protect_pdf",
-            )
-        ],
-        [
-            InlineKeyboardButton("⬅️ Back", callback_data="home"),
-        ],
-    ]
-
-    return InlineKeyboardMarkup(keyboard)
-
-
-# =========================================================
-# IMAGE MENU
-# =========================================================
-
-def image_menu():
-    keyboard = [
-        [
-            InlineKeyboardButton(
-                "📐 Resize Image",
-                callback_data="resize_image",
-            )
-        ],
-        [
-            InlineKeyboardButton(
-                "🗜️ Compress Image",
-                callback_data="compress_image",
-            )
-        ],
-        [
-            InlineKeyboardButton(
-                "🔄 Convert Image",
-                callback_data="convert_image",
-            )
-        ],
-        [
-            InlineKeyboardButton(
-                "🖼️ Image → PDF",
-                callback_data="image_to_pdf",
-            )
-        ],
-        [
-            InlineKeyboardButton(
-                "ℹ️ Image Info",
-                callback_data="image_info",
-            )
-        ],
-        [
-            InlineKeyboardButton("⬅️ Back", callback_data="home"),
-        ],
-    ]
-
-    return InlineKeyboardMarkup(keyboard)
-
-
-# =========================================================
-# QR MENU
-# =========================================================
-
-def qr_menu():
-    keyboard = [
-        [
-            InlineKeyboardButton(
-                "📝 Text → QR",
-                callback_data="qr_text",
-            ),
-            InlineKeyboardButton(
-                "🔗 URL → QR",
-                callback_data="qr_url",
-            ),
-        ],
-        [
-            InlineKeyboardButton(
-                "📶 WiFi → QR",
-                callback_data="qr_wifi",
-            ),
-            InlineKeyboardButton(
-                "👤 Contact → QR",
-                callback_data="qr_contact",
-            ),
-        ],
-        [
-            InlineKeyboardButton(
-                "📧 Email → QR",
-                callback_data="qr_email",
-            ),
-            InlineKeyboardButton(
-                "📞 Phone → QR",
-                callback_data="qr_phone",
-            ),
-        ],
-        [
-            InlineKeyboardButton(
-                "📷 Scan QR",
-                callback_data="qr_scan",
-            )
-        ],
-        [
-            InlineKeyboardButton(
-                "📄 QR → PDF",
-                callback_data="qr_to_pdf",
-            )
-        ],
-        [
-            InlineKeyboardButton("⬅️ Back", callback_data="home"),
-        ],
-    ]
-
-    return InlineKeyboardMarkup(keyboard)
-
-
-# =========================================================
-# AUDIO MENU
-# =========================================================
-
-def audio_menu():
-    keyboard = [
-        [
-            InlineKeyboardButton(
-                "🔊 Text → Voice",
-                callback_data="text_to_voice",
-            )
-        ],
-        [
-            InlineKeyboardButton(
-                "🎚️ Voice Changer",
-                callback_data="voice_changer",
-            )
-        ],
-        [
-            InlineKeyboardButton(
-                "✂️ Audio Cutter",
-                callback_data="audio_cutter",
-            )
-        ],
-        [
-            InlineKeyboardButton(
-                "🔄 Audio Converter",
-                callback_data="audio_converter",
-            )
-        ],
-        [
-            InlineKeyboardButton(
-                "🔉 Volume Changer",
-                callback_data="volume_changer",
-            )
-        ],
-        [
-            InlineKeyboardButton(
-                "ℹ️ Audio Info",
-                callback_data="audio_info",
-            )
-        ],
-        [
-            InlineKeyboardButton("⬅️ Back", callback_data="home"),
-        ],
-    ]
-
-    return InlineKeyboardMarkup(keyboard)
-
-
-# =========================================================
-# FILE MENU
-# =========================================================
-
-def file_menu():
-    keyboard = [
-        [
-            InlineKeyboardButton(
-                "📦 Create ZIP",
-                callback_data="create_zip",
-            ),
-            InlineKeyboardButton(
-                "📂 Extract ZIP",
-                callback_data="extract_zip",
-            ),
-        ],
-        [
-            InlineKeyboardButton(
-                "🔄 File Converter",
-                callback_data="file_converter",
-            )
-        ],
-        [
-            InlineKeyboardButton(
-                "ℹ️ File Info",
-                callback_data="file_info",
-            )
-        ],
-        [
-            InlineKeyboardButton("⬅️ Back", callback_data="home"),
-        ],
-    ]
-
-    return InlineKeyboardMarkup(keyboard)
-
-
-# =========================================================
-# DEVELOPER MENU
-# =========================================================
-
-def developer_menu():
-    keyboard = []
-
-    if DEVELOPER_USERNAME:
-        keyboard.append(
-            [
-                InlineKeyboardButton(
-                    "💬 Contact Developer",
-                    url=f"https://t.me/{DEVELOPER_USERNAME.lstrip('@')}",
-                )
-            ]
+async def admin(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.effective_user.id != ADMIN_ID:
+        await update.message.reply_text(
+            "❌ এই command শুধু admin-এর জন্য।"
         )
+        return
 
-    if DEVELOPER_CHANNEL:
-        keyboard.append(
-            [
-                InlineKeyboardButton(
-                    "📢 Developer Channel",
-                    url=DEVELOPER_CHANNEL,
-                )
-            ]
-        )
-
-    keyboard.append(
-        [
-            InlineKeyboardButton("⬅️ Back", callback_data="home"),
-        ]
+    await update.message.reply_text(
+        "👑 Admin Panel",
+        reply_markup=admin_menu(),
     )
 
-    return InlineKeyboardMarkup(keyboard)
 
-
-# =========================================================
-# ADMIN MENU
-# =========================================================
-
-def admin_menu():
-    keyboard = [
-        [
-            InlineKeyboardButton(
-                "📊 Statistics",
-                callback_data="admin_stats",
-            )
-        ],
-        [
-            InlineKeyboardButton(
-                "👥 Users",
-                callback_data="admin_users",
-            )
-        ],
-        [
-            InlineKeyboardButton(
-                "📢 Broadcast",
-                callback_data="admin_broadcast",
-            )
-        ],
-        [
-            InlineKeyboardButton(
-                "🚫 Ban User",
-                callback_data="admin_ban",
-            ),
-            InlineKeyboardButton(
-                "✅ Unban User",
-                callback_data="admin_unban",
-            ),
-        ],
-        [
-            InlineKeyboardButton(
-                "🛠️ Maintenance",
-                callback_data="admin_maintenance",
-            )
-        ],
-        [
-            InlineKeyboardButton(
-                "⬅️ Back",
-                callback_data="home",
-            )
-        ],
-    ]
-
-    return InlineKeyboardMarkup(keyboard)
-
-
-# =========================================================
-# BUTTON HANDLER
-# =========================================================
+# =========================
+# CALLBACK HANDLER
+# =========================
 
 async def button_handler(
     update: Update,
-    context: ContextTypes.DEFAULT_TYPE,
+    context: ContextTypes.DEFAULT_TYPE
 ):
     query = update.callback_query
-
     await query.answer()
 
     data = query.data
 
     # -------------------------
-    # MAIN NAVIGATION
+    # Main menu
     # -------------------------
 
     if data == "home":
         await query.edit_message_text(
-            "🏠 Main Menu\n\nChoose a category:",
+            "🏠 Main Menu\n\nএকটি category নির্বাচন করো:",
             reply_markup=main_menu(),
         )
         return
 
+    # -------------------------
+    # Category menus
+    # -------------------------
+
     if data == "pdf_menu":
         await query.edit_message_text(
-            "📄 PDF TOOLS\n\nChoose an option:",
+            "📄 PDF Tools",
             reply_markup=pdf_menu(),
         )
         return
 
     if data == "image_menu":
         await query.edit_message_text(
-            "🖼️ IMAGE TOOLS\n\nChoose an option:",
+            "🖼️ Image Tools",
             reply_markup=image_menu(),
         )
         return
 
     if data == "qr_menu":
         await query.edit_message_text(
-            "🔳 QR TOOLS\n\nChoose an option:",
+            "🔳 QR Tools",
             reply_markup=qr_menu(),
         )
         return
 
     if data == "audio_menu":
         await query.edit_message_text(
-            "🎙️ AUDIO TOOLS\n\nChoose an option:",
+            "🎙️ Audio Tools",
             reply_markup=audio_menu(),
         )
         return
 
     if data == "file_menu":
         await query.edit_message_text(
-            "🛠️ FILE TOOLS\n\nChoose an option:",
+            "🛠️ File Tools",
             reply_markup=file_menu(),
         )
         return
 
     # -------------------------
-    # DEVELOPER
+    # PDF features
+    # -------------------------
+
+    if data == "text_to_pdf":
+        await start_text_to_pdf(update, context)
+        return
+
+    if data == "image_to_pdf":
+        await start_image_to_pdf(update, context)
+        return
+
+    if data == "merge_pdf":
+        await start_merge_pdf(update, context)
+        return
+
+    if data == "split_pdf":
+        await start_split_pdf(update, context)
+        return
+
+    if data == "pdf_to_text":
+        await start_pdf_to_text(update, context)
+        return
+
+    if data == "protect_pdf":
+        await start_protect_pdf(update, context)
+        return
+
+    # -------------------------
+    # Developer
     # -------------------------
 
     if data == "developer":
         text = (
-            "👨‍💻 DEVELOPER\n\n"
-            f"👤 Name: {DEVELOPER_NAME}\n"
-            f"📱 Telegram: {DEVELOPER_USERNAME}\n\n"
-            "⚡ All-in-One Utility Bot"
+            "👨‍💻 Developer\n\n"
+            f"Name: {DEVELOPER_NAME}\n"
         )
+
+        if DEVELOPER_USERNAME:
+            text += f"Telegram: {DEVELOPER_USERNAME}\n"
+
+        if DEVELOPER_CHANNEL:
+            text += f"Channel: {DEVELOPER_CHANNEL}\n"
 
         await query.edit_message_text(
             text,
-            reply_markup=developer_menu(),
-        )
-        return
-
-    # -------------------------
-    # HELP
-    # -------------------------
-
-    if data == "help":
-        text = (
-            "ℹ️ HELP\n\n"
-            "1️⃣ Select a category.\n"
-            "2️⃣ Select the feature you need.\n"
-            "3️⃣ Send the required file/text.\n"
-            "4️⃣ The bot will process it.\n"
-            "5️⃣ You will receive the result.\n\n"
-            "🏠 You can always use the Back button "
-            "to return to the main menu."
-        )
-
-        await query.edit_message_text(
-            text,
-            reply_markup=InlineKeyboardMarkup(
-                [
-                    [
-                        InlineKeyboardButton(
-                            "🏠 Home",
-                            callback_data="home",
-                        )
-                    ]
-                ]
+            reply_markup=developer_menu(
+                DEVELOPER_USERNAME,
+                DEVELOPER_CHANNEL,
             ),
         )
         return
 
     # -------------------------
-    # ADMIN
+    # Help
     # -------------------------
 
-    if data == "admin":
-        if query.from_user.id != ADMIN_ID:
-            await query.answer(
-                "❌ You are not authorized.",
-                show_alert=True,
+    if data == "help":
+        await query.edit_message_text(
+            "ℹ️ Help\n\n"
+            "1️⃣ একটি category নির্বাচন করো।\n"
+            "2️⃣ যে tool দরকার সেটি নির্বাচন করো।\n"
+            "3️⃣ Bot যা চাইবে সেই file/text পাঠাও।\n\n"
+            "⚠️ বড় file process করতে বেশি সময় লাগতে পারে।",
+            reply_markup=InlineKeyboardMarkup([
+                [
+                    InlineKeyboardButton(
+                        "🔙 Back",
+                        callback_data="home"
+                    )
+                ]
+            ]),
+        )
+        return
+
+    # -------------------------
+    # Admin buttons
+    # -------------------------
+
+    admin_callbacks = {
+        "admin_stats": "📊 Statistics",
+        "admin_users": "👥 Users",
+        "admin_broadcast": "📢 Broadcast",
+        "admin_ban": "🚫 Ban User",
+        "admin_unban": "✅ Unban User",
+        "admin_maintenance": "🔧 Maintenance",
+    }
+
+    if data in admin_callbacks:
+        if update.effective_user.id != ADMIN_ID:
+            await query.edit_message_text(
+                "❌ Unauthorized."
             )
             return
 
         await query.edit_message_text(
-            "👑 ADMIN PANEL\n\nChoose an option:",
+            f"{admin_callbacks[data]}\n\n"
+            "এই admin feature পরবর্তী ধাপে connect করা হবে।",
             reply_markup=admin_menu(),
         )
         return
 
     # -------------------------
-    # FUTURE FEATURES
+    # Future features
     # -------------------------
 
-    feature_names = {
-        "text_to_pdf": "📝 Text → PDF",
-        "image_to_pdf": "🖼️ Image → PDF",
-        "merge_pdf": "🔗 Merge PDF",
-        "split_pdf": "✂️ Split PDF",
-        "pdf_to_image": "🖼️ PDF → Image",
-        "pdf_to_text": "📝 PDF → Text",
-        "protect_pdf": "🔐 Protect PDF",
-        "resize_image": "📐 Resize Image",
-        "compress_image": "🗜️ Compress Image",
+    future_features = {
+        "resize_image": "📐 Resize",
+        "compress_image": "🗜️ Compress",
         "convert_image": "🔄 Convert Image",
         "image_info": "ℹ️ Image Info",
+
         "qr_text": "📝 Text → QR",
-        "qr_url": "🔗 URL → QR",
-        "qr_wifi": "📶 WiFi → QR",
+        "qr_url": "🌐 URL → QR",
+        "qr_wifi": "📶 Wi-Fi → QR",
         "qr_contact": "👤 Contact → QR",
         "qr_email": "📧 Email → QR",
-        "qr_phone": "📞 Phone → QR",
-        "qr_scan": "📷 Scan QR",
+        "qr_phone": "📱 Phone → QR",
+        "qr_scan": "🔍 Scan QR",
         "qr_to_pdf": "📄 QR → PDF",
-        "text_to_voice": "🔊 Text → Voice",
-        "voice_changer": "🎚️ Voice Changer",
+
+        "text_to_voice": "🗣️ Text → Voice",
+        "voice_changer": "🎭 Voice Changer",
         "audio_cutter": "✂️ Audio Cutter",
         "audio_converter": "🔄 Audio Converter",
-        "volume_changer": "🔉 Volume Changer",
+        "volume_changer": "🔊 Volume Changer",
         "audio_info": "ℹ️ Audio Info",
-        "create_zip": "📦 Create ZIP",
-        "extract_zip": "📂 Extract ZIP",
+
+        "create_zip": "🗜️ Create ZIP",
+        "extract_zip": "📦 Extract ZIP",
         "file_converter": "🔄 File Converter",
         "file_info": "ℹ️ File Info",
     }
 
-    if data in feature_names:
+    if data in future_features:
         await query.edit_message_text(
-            f"{feature_names[data]}\n\n"
-            "⏳ This feature will be connected in the next step.",
-            reply_markup=InlineKeyboardMarkup(
+            f"{future_features[data]}\n\n"
+            "🔨 এই feature-এর processing module "
+            "পরবর্তী ধাপে যুক্ত করা হবে।",
+            reply_markup=InlineKeyboardMarkup([
                 [
-                    [
-                        InlineKeyboardButton(
-                            "⬅️ Back",
-                            callback_data="home",
-                        )
-                    ]
+                    InlineKeyboardButton(
+                        "🔙 Back",
+                        callback_data="home"
+                    )
                 ]
-            ),
+            ]),
         )
         return
 
-    # -------------------------
-    # UNKNOWN CALLBACK
-    # -------------------------
 
-    await query.edit_message_text(
-        "❌ Unknown option.",
-        reply_markup=main_menu(),
-    )
+# =========================
+# TEXT HANDLER
+# =========================
 
-
-# =========================================================
-# ADMIN COMMAND
-# =========================================================
-
-async def admin_command(
+async def text_handler(
     update: Update,
-    context: ContextTypes.DEFAULT_TYPE,
+    context: ContextTypes.DEFAULT_TYPE
 ):
-    if update.effective_user.id != ADMIN_ID:
-        await update.effective_message.reply_text(
-            "❌ You are not authorized."
-        )
+    action = context.user_data.get("pdf_action")
+
+    if action == "text_to_pdf":
+        await handle_pdf_text(update, context)
         return
 
-    await update.effective_message.reply_text(
-        "👑 ADMIN PANEL\n\nChoose an option:",
-        reply_markup=admin_menu(),
-    )
+    if context.user_data.get("protect_pdf_path"):
+        await handle_protect_password(update, context)
+        return
 
 
-# =========================================================
+# =========================
+# DOCUMENT HANDLER
+# =========================
+
+async def document_handler(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE
+):
+    await handle_pdf_document(update, context)
+
+
+# =========================
+# DONE COMMAND
+# =========================
+
+async def done_command(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE
+):
+    await done_pdf(update, context)
+
+
+# =========================
 # ERROR HANDLER
-# =========================================================
+# =========================
 
 async def error_handler(
     update: object,
-    context: ContextTypes.DEFAULT_TYPE,
+    context: ContextTypes.DEFAULT_TYPE
 ):
     logger.error(
         "Exception while handling update:",
@@ -628,13 +352,13 @@ async def error_handler(
     )
 
 
-# =========================================================
+# =========================
 # MAIN
-# =========================================================
+# =========================
 
 def main():
     if not BOT_TOKEN:
-        raise ValueError(
+        raise RuntimeError(
             "BOT_TOKEN environment variable is missing."
         )
 
@@ -650,18 +374,37 @@ def main():
     )
 
     application.add_handler(
-        CommandHandler("admin", admin_command)
+        CommandHandler("admin", admin)
     )
 
-    # Inline buttons
+    application.add_handler(
+        CommandHandler("done", done_command)
+    )
+
+    # Buttons
     application.add_handler(
         CallbackQueryHandler(button_handler)
     )
 
-    # Errors
+    # Text messages
+    application.add_handler(
+        MessageHandler(
+            filters.TEXT & ~filters.COMMAND,
+            text_handler,
+        )
+    )
+
+    # Documents
+    application.add_handler(
+        MessageHandler(
+            filters.Document.ALL,
+            document_handler,
+        )
+    )
+
     application.add_error_handler(error_handler)
 
-    logger.info("Bot started successfully.")
+    logger.info("Bot started.")
 
     application.run_polling(
         allowed_updates=Update.ALL_TYPES
